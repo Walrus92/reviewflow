@@ -1,0 +1,11 @@
+###
+POST http://localhost:3000/api/competitors/sync
+Content-Type: application/json
+
+{
+  "profile_id": "596b7dd8-9fdd-495b-b9ce-a81e90f0568c",
+  "lat": 36.4244511,
+  "lng": -5.1456594,
+  "type": "store"
+}
+

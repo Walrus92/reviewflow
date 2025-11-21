@@ -33,6 +33,8 @@ export default function Home() {
             </a>{" "}
             center.
           </p>
+          <div className="text-blue-500 text-3xl">Tailwind 4 funcionando</div>
+
         </div>
         <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
           <a
