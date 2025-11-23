@@ -1,6 +1,17 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { NextRequest } from "next/server";
+import jwt from "jsonwebtoken";
 
-export async function getSession() {
-  return await getServerSession(authOptions as any);
+export function getEmailFromCookie(req: NextRequest) {
+  const token =
+    req.cookies.get("next-auth.session-token")?.value ??
+    req.cookies.get("__Secure-next-auth.session-token")?.value;
+
+  if (!token) return null;
+
+  try {
+    const decoded: any = jwt.verify(token, process.env.NEXTAUTH_SECRET!);
+    return decoded.email;
+  } catch {
+    return null;
+  }
 }

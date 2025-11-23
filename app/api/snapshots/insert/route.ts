@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { getGoogleDetails } from "@/lib/googlePlaces";
+import { getPlaceDetails } from "@/lib/googlePlaces";
 
-// Insertar snapshot para el negocio del usuario
 export async function POST(req: NextRequest) {
     try {
-        const { place_id } = await req.json();
+        const { place_id, profile_id } = await req.json();
 
-        if (!place_id) {
+        if (!place_id || !profile_id) {
             return NextResponse.json(
-                { error: "place_id required" },
+                { error: "place_id and profile_id required" },
                 { status: 400 }
             );
         }
 
-        // 1) Obtener datos actualizados del negocio
-        const google = await getGoogleDetails(place_id);
+        // 1) Obtener datos actualizados
+        const google = await getPlaceDetails(place_id);
 
         if (!google) {
             return NextResponse.json(
@@ -24,20 +23,22 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // 2) Buscar último snapshot
+        // 2) Buscar último snapshot DEL MISMO PERFIL
         const { data: last } = await supabaseAdmin
             .from("review_snapshots")
             .select("*")
             .eq("place_id", place_id)
+            .eq("profile_id", profile_id)
             .order("created_at", { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
         // 3) Insertar snapshot nuevo
         const { data: inserted, error } = await supabaseAdmin
             .from("review_snapshots")
             .insert({
                 place_id,
+                profile_id,   // 🔥 AHORA SÍ
                 rating: google.rating,
                 review_count: google.review_count,
                 data: google,
@@ -50,14 +51,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error }, { status: 500 });
         }
 
-        // 4) Detectar cambios para alertas
-        const alerts = [];
+        // 4) Detectar alertas
+        const alerts: any[] = [];
 
         if (last) {
-            if ((google.review_count ?? 0) > (last.review_count ?? 0)) {
+            const oldCount = last.review_count ?? 0;
+            const newCount = google.review_count ?? 0;
+
+            if (newCount > oldCount) {
                 alerts.push({
                     type: "review_increase",
-                    message: `+${google.review_count ?? 0 - last.review_count} nuevas reseñas`,
+                    message: `+${newCount - oldCount} nuevas reseñas`,
                 });
             }
 
@@ -70,10 +74,11 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({
-            success: true,
+            ok: true,
             snapshot: inserted,
             alerts,
         });
+
     } catch (err) {
         console.error(err);
         return NextResponse.json(

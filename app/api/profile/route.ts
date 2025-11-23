@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import jwt from "jsonwebtoken";
+import { getEmailFromCookie } from "@/lib/auth";
 
 function slugify(str: string) {
     return str
@@ -8,18 +9,6 @@ function slugify(str: string) {
         .replace(/'/g, "")
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
-}
-
-function getEmailFromCookie(req: NextRequest) {
-    const token = req.cookies.get("next-auth.session-token")?.value;
-    if (!token) return null;
-
-    try {
-        const decoded: any = jwt.verify(token, process.env.NEXTAUTH_SECRET!);
-        return decoded.email;
-    } catch (err) {
-        return null;
-    }
 }
 
 export async function GET(req: NextRequest) {

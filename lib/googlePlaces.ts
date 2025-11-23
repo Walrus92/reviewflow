@@ -6,7 +6,7 @@ const BASE_URL = "https://maps.googleapis.com/maps/api/place";
 /**
  * Obtiene detalles completos de un lugar por place_id.
  */
-export async function getGoogleDetails(placeId: string): Promise<GooglePlaceDetails | null> {
+export async function getPlaceDetails(placeId: string): Promise<GooglePlaceDetails | null> {
   const url = `${BASE_URL}/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,formatted_address,geometry,types,photos&key=${API_KEY}`;
 
   const res = await fetch(url);

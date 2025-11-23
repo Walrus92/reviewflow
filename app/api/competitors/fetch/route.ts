@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import jwt from "jsonwebtoken";
+import { getEmailFromCookie } from "@/lib/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_SITE_URL;
-
-function getEmailFromCookie(req: NextRequest) {
-    const token = req.cookies.get("next-auth.session-token")?.value;
-    if (!token) return null;
-
-    try {
-        const decoded: any = jwt.verify(token, process.env.NEXTAUTH_SECRET!);
-        return decoded.email;
-    } catch {
-        return null;
-    }
-}
 
 export async function POST(req: NextRequest) {
     try {
