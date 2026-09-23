@@ -10,6 +10,7 @@ export default function Sidebar() {
     { href: "/dashboard", label: "Qué ha cambiado" },
     { href: "/competitors", label: "Competidores" },
     { href: "/history", label: "Histórico" },
+    { href: "/reviews", label: "Reseñas propias" },
     { href: "/alerts", label: "Alertas" },
     { href: "/settings", label: "Configuración" },
   ];

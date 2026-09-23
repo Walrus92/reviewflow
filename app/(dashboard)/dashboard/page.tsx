@@ -121,8 +121,14 @@ export default function DashboardPage() {
 
       <section className="rounded-lg border bg-white p-5 space-y-3">
         <h2 className="text-lg font-semibold">Para entender los motivos</h2>
-        <p className="text-gray-700">Todavía no hay una fuente autorizada de textos de reseñas conectada a este negocio. Por eso no atribuimos los cambios a entregas, horarios o personas sin evidencia.</p>
-        <Link href="/demo" className="underline text-blue-700">Ver un ejemplo con reseñas ficticias</Link>
+        {overview.ownReviewSampleCount > 0 ? <>
+          <p className="text-gray-700">Hemos analizado {overview.ownReviewSampleCount} reseñas propias importadas, publicadas en los últimos 90 días. Las señales anteriores incluyen citas cuando hay menciones repetidas; no prueban la causa de un cambio de valoración.</p>
+          <Link href="/reviews" className="underline text-blue-700">Ver reseñas y procedencia</Link>
+        </> : <>
+          <p className="text-gray-700">Todavía no hay textos de reseñas propias autorizados en tu cuenta. Por eso no atribuimos los cambios a entregas, horarios o personas sin evidencia.</p>
+          <Link href="/reviews" className="underline text-blue-700">Importar reseñas propias</Link>
+          <span className="mx-2">·</span><Link href="/demo" className="underline text-blue-700">Ver ejemplo ficticio</Link>
+        </>}
       </section>
       <p className="text-xs text-gray-500">Cada cifra muestra su fecha y procedencia. Un periodo sin capturas comparables se muestra como no disponible.</p>
     </div>

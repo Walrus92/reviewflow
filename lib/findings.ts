@@ -97,3 +97,26 @@ export function reviewFindings(reviews: ReviewObservation[]): Finding[] {
   });
   return findings;
 }
+
+export function ownReviewFindings(reviews: ReviewObservation[]): Finding[] {
+  const own = reviews.filter((review) => review.subject === "own");
+  const findings = reviewFindings(own);
+  const negative = own.filter((review) => review.rating <= 2);
+  const waiting = matching(negative, /\besper[aeéó]|\btard[óoé]|\blent[oa]s?\b|\bdemora/i);
+  if (waiting.length >= 2) findings.push({
+    id: "own-waiting", title: "Varias reseñas critican los tiempos de espera",
+    evidence: [`${waiting.length} de ${own.length} reseñas propias recientes de la muestra lo mencionan.`,
+      ...waiting.slice(0, 2).map((review) => quote(review.text))],
+    action: "Comprueba cuándo se acumulan las esperas y si los tiempos prometidos coinciden con los reales.",
+    basis: "reviews", caveat: "Las reseñas señalan experiencias; no miden el tiempo medio de todos los clientes.",
+  });
+  const care = matching(own.filter((review) => review.rating >= 4), /atenci[oó]n|trato|amable|personal|me atendi[oó]|nos atendi[oó]/i);
+  if (care.length >= 2) findings.push({
+    id: "own-service-praise", title: "La atención aparece repetidamente en los elogios",
+    evidence: [`${care.length} de ${own.length} reseñas propias recientes de la muestra lo mencionan.`,
+      ...care.slice(0, 2).map((review) => quote(review.text))],
+    action: "Identifica qué prácticas del equipo generan esos comentarios y mantenlas.",
+    basis: "reviews", caveat: "Es una percepción expresada en reseñas, no una medida de todos los clientes.",
+  });
+  return findings;
+}

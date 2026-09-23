@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "./supabaseAdmin";
 import { buildInsights, summarizeMetrics, type MetricPoint, type MetricSummary, type CompetitorSummary } from "./metrics";
-import { metricFindings, type Finding } from "./findings";
+import { metricFindings, ownReviewFindings, type Finding } from "./findings";
+import type { ReviewObservation } from "./reviews";
 export type { MetricPoint, MetricSummary, CompetitorSummary } from "./metrics";
 
 export type ChangeItem = {
@@ -21,6 +22,7 @@ export type Overview = {
   changes: ChangeItem[];
   insights: string[];
   findings: Finding[];
+  ownReviewSampleCount: number;
 };
 
 export async function loadOverview(profileId: string, now = new Date(), changesSince?: string): Promise<Overview> {
@@ -31,7 +33,9 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
     .single();
   if (profileError || !profile) throw new Error("PROFILE_NOT_FOUND");
 
-  const [{ data: ownRows, error: ownError }, { data: links, error: linkError }] = await Promise.all([
+  const reviewCutoff = new Date(now.getTime() - 90 * 86_400_000).toISOString().slice(0, 10);
+  const [{ data: ownRows, error: ownError }, { data: links, error: linkError },
+    { data: reviewRows, error: reviewError }] = await Promise.all([
     supabaseAdmin.from("review_snapshots")
       .select("rating,review_count,created_at,source_kind")
       .eq("profile_id", profileId)
@@ -40,8 +44,12 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
     supabaseAdmin.from("competitor_relations")
       .select("competitor_id")
       .eq("profile_id", profileId),
+    supabaseAdmin.from("owner_reviews")
+      .select("id,rating,review_text,published_at")
+      .eq("profile_id", profileId).gte("published_at", reviewCutoff)
+      .order("published_at", { ascending: false }).limit(200),
   ]);
-  if (ownError || linkError) throw new Error("SNAPSHOT_QUERY_FAILED");
+  if (ownError || linkError || reviewError) throw new Error("OVERVIEW_QUERY_FAILED");
 
   const competitorIds = [...new Set((links ?? []).map((link) => Number(link.competitor_id)))];
   let competitors: { id: number; name: string | null; place_id: string }[] = [];
@@ -79,6 +87,13 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
     placeId: competitor.place_id,
     ...summarizeMetrics(competitorRows.filter((row) => row.competitor_id === competitor.id), now),
   })).sort((a, b) => (b.reviewCount ?? -1) - (a.reviewCount ?? -1));
+  const ownReviews: ReviewObservation[] = (reviewRows ?? []).map((row) => ({
+    id: String(row.id), subject: "own", businessName: profile.business_name ?? "Tu negocio",
+    rating: row.rating, text: row.review_text, publishedAt: row.published_at, source: "authorized",
+  }));
+  const reviewSignals = ownReviewFindings(ownReviews);
+  const metricSignals = metricFindings(own, competitive, now)
+    .filter((finding) => finding.id !== "no-strong-signal" || reviewSignals.length === 0);
 
   return {
     businessName: profile.business_name ?? "Tu negocio",
@@ -95,6 +110,7 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
       createdAt: row.created_at,
     })),
     insights: buildInsights(own, competitive),
-    findings: metricFindings(own, competitive, now),
+    findings: [...reviewSignals, ...metricSignals].slice(0, 3),
+    ownReviewSampleCount: ownReviews.length,
   };
 }

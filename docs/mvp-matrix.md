@@ -15,7 +15,7 @@ Estado tras la migración incremental del 23 de septiembre de 2026. «Parcial» 
 | 9. Panel «Qué ha cambiado» | Existente y reutilizable | Compara con última visita y muestra alertas, métricas e insights. |
 | 10. Comparativa competitiva | Existente y reutilizable | Valoración, volumen y crecimiento semanal cuando hay periodo comparable. |
 | 11. Alertas | Parcialmente implementado | Listado e inserción desde rutas de captura. Falta captura periódica autorizada e idempotencia persistente. |
-| 12. Análisis de reseñas | Parcialmente implementado | Contrato de fuente y análisis temático con reseñas ficticias en `/demo`. Falta fuente licenciada para datos reales. |
+| 12. Análisis de reseñas | Parcialmente implementado | Demo ficticia y análisis de reseñas propias importadas con permiso y evidencia en el panel. Falta fuente automática propia y fuente autorizada para competidores. |
 | 13. Insights generados | Existente y reutilizable | Reglas deterministas sobre métricas; ampliar solo a partir de preguntas reales de usuarios. |
 | 14. Email semanal | Parcialmente implementado | Plantilla, preferencia, endpoint protegido, flag global y cron de Vercel configurado. Falta despliegue y prueba de entrega real. |
 | 15. Configuración | Existente y reutilizable | Datos del negocio, Places, Instagram y preferencia de email. Refinar validaciones y mensajes según pruebas de uso. |
