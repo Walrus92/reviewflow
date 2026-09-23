@@ -3,6 +3,13 @@ import { GooglePlaceDetails, GooglePlaceSearchResult } from "./types";
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY!;
 const BASE_URL = "https://maps.googleapis.com/maps/api/place";
 
+export type GooglePlaceResult = {
+  place_id: string; name: string; rating?: number; user_ratings_total?: number;
+  formatted_address?: string; vicinity?: string; types?: string[];
+  opening_hours?: { open_now?: boolean };
+  geometry?: { location?: { lat?: number; lng?: number } };
+};
+
 /**
  * Obtiene detalles completos de un lugar por place_id.
  */
@@ -41,7 +48,7 @@ export async function searchNearby(lat: number, lng: number, radius = 500): Prom
 
   if (data.status !== "OK") return [];
 
-  return data.results.map((r: any) => ({
+  return (data.results as GooglePlaceResult[]).map((r) => ({
     place_id: r.place_id,
     name: r.name,
     address: r.vicinity ?? null,

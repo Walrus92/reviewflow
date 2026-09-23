@@ -1,6 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getEmailFromCookie } from "@/lib/auth";
+import type { GooglePlaceResult } from "@/lib/googlePlaces";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+    if (!getEmailFromCookie(req)) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     const { query } = await req.json();
 
     if (!query || query.trim().length === 0) {
@@ -17,7 +20,7 @@ export async function POST(req: Request) {
 
     if (!resp.results) return NextResponse.json([]);
 
-    const enriched = resp.results.slice(0, 10).map((r: any) => ({
+    const enriched = (resp.results as GooglePlaceResult[]).slice(0, 10).map((r) => ({
         name: r.name,
         place_id: r.place_id,
         rating: r.rating ?? null,
@@ -25,9 +28,6 @@ export async function POST(req: Request) {
         address: r.formatted_address ?? "",
         open_now: r.opening_hours?.open_now ?? null,
         types: r.types ?? [],
-        photo_url: r.photos?.[0]
-            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${r.photos[0].photo_reference}&key=${key}`
-            : null,
     }));
 
     return NextResponse.json(enriched);

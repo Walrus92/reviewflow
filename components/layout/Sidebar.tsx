@@ -7,9 +7,10 @@ export default function Sidebar() {
   const path = usePathname();
 
   const links = [
-    { href: "/dashboard", label: "Dashboard" },
+    { href: "/dashboard", label: "Qué ha cambiado" },
+    { href: "/competitors", label: "Competidores" },
+    { href: "/history", label: "Histórico" },
     { href: "/alerts", label: "Alertas" },
-    { href: "/landing", label: "Landing" },
     { href: "/settings", label: "Configuración" },
   ];
 

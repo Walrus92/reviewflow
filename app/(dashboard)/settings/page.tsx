@@ -20,15 +20,24 @@ const ICONS: Record<string, string> = {
   establishment: "🏢",
 };
 
-export default function SettingsPage() {
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+type Profile = {
+  id?: string; slug?: string; business_name?: string; google_review_url?: string;
+  instagram_url?: string; place_id?: string; address?: string; rating?: number | null;
+  reviews?: number | null; types?: string[]; weekly_email_enabled?: boolean;
+};
+type SearchResult = Profile & { place_id: string; name: string };
+type GoogleInfo = SearchResult & { review_count?: number | null };
 
-  const [googleInfo, setGoogleInfo] = useState<any | null>(null);
+export default function SettingsPage() {
+  const [profile, setProfile] = useState<Profile>({});
+  const [loading, setLoading] = useState(true);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  const [googleInfo, setGoogleInfo] = useState<GoogleInfo | null>(null);
   const [checkingGoogle, setCheckingGoogle] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
 
   // ----------------------
@@ -62,13 +71,18 @@ export default function SettingsPage() {
   const save = async () => {
     const method = profile?.id ? "PUT" : "POST";
 
-    await fetch("/api/profile", {
+    const response = await fetch("/api/profile", {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(profile),
     });
 
-    alert("Guardado");
+    if (response.ok) {
+      setProfile(await response.json());
+      setSaveMessage("Configuración guardada.");
+    } else {
+      setSaveMessage("No se pudo guardar la configuración.");
+    }
   };
 
   // ----------------------
@@ -163,7 +177,7 @@ export default function SettingsPage() {
 
   // sincronizar con profile
   useEffect(() => {
-    setProfile((p: any) => ({
+    setProfile((p) => ({
       ...p,
       instagram_url: igUsername
         ? `https://instagram.com/${igUsername}`
@@ -189,7 +203,7 @@ export default function SettingsPage() {
             target="_blank"
             className="underline text-blue-600"
           >
-            http://localhost:3000/b/{profile.slug}
+            /b/{profile.slug}
           </a>
         </p>
       )}
@@ -236,6 +250,15 @@ export default function SettingsPage() {
             setProfile({ ...profile, business_name: e.target.value })
           }
         />
+
+        <label className="block text-sm">Place ID del negocio
+          <input
+            className="mt-1 w-full border px-3 py-2 rounded"
+            placeholder="ID de Google Maps; opcional en desarrollo local"
+            value={profile.place_id || ""}
+            onChange={(e) => setProfile({ ...profile, place_id: e.target.value })}
+          />
+        </label>
 
         {/* URL Google Reviews */}
         <input
@@ -288,16 +311,7 @@ export default function SettingsPage() {
                       setSearchQuery("");
                     }}
                   >
-                    {r.photo_url ? (
-                      <img
-                        src={r.photo_url}
-                        className="w-14 h-14 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="w-14 h-14 bg-gray-200 rounded flex items-center justify-center text-xl">
-                        {icon}
-                      </div>
-                    )}
+                    <div className="w-14 h-14 bg-gray-200 rounded flex items-center justify-center text-xl">{icon}</div>
 
                     <div className="flex-1">
                       <div className="font-semibold">{r.name}</div>
@@ -383,12 +397,21 @@ export default function SettingsPage() {
         </div>
 
         {/* GUARDAR */}
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={Boolean(profile.weekly_email_enabled)}
+            onChange={(e) => setProfile({ ...profile, weekly_email_enabled: e.target.checked })}
+          />
+          <span>Quiero recibir un resumen semanal por email cuando el envío esté configurado.</span>
+        </label>
         <button
           onClick={save}
           className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
         >
           Guardar
         </button>
+        {saveMessage && <p role="status" className="text-sm">{saveMessage}</p>}
 
       </div>
     </div>

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getEmailFromCookie } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
+    if (!getEmailFromCookie(req)) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     const { username } = await req.json();
 
     if (!username) {
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     // Otros códigos → error
     return NextResponse.json({ exists: false }, { status: 500 });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ exists: false }, { status: 500 });
   }
 }

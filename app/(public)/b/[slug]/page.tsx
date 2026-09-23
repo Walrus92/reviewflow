@@ -18,10 +18,12 @@ const ICONS: Record<string, string> = {
   establishment: "🏢",
 };
 
-export default function BusinessLanding({ params }: any) {
+type PublicProfile = { types?: string[]; business_name?: string; rating?: number | null; reviews?: number | null; address?: string; google_review_url?: string; instagram_url?: string };
+
+export default function BusinessLanding({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use<{ slug: string }>(params);
 
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

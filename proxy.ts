@@ -2,9 +2,11 @@ import { NextResponse, NextRequest } from "next/server";
 
 import { jwtVerify } from "jose";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
     const protectedPaths = [
         "/dashboard",
+        "/competitors",
+        "/history",
         "/alerts",
         "/settings",
         "/landing"
@@ -17,19 +19,20 @@ export async function middleware(req: NextRequest) {
         return NextResponse.next();
     }
 
-    const token = req.cookies.get("next-auth.session-token")?.value;
+    const token = req.cookies.get("reviewflow.session")?.value;
 
     if (!token) {
         return NextResponse.redirect(new URL("/login", req.url));
     }
 
     try {
-        await jwtVerify(
+        const { payload } = await jwtVerify(
             token,
             new TextEncoder().encode(process.env.NEXTAUTH_SECRET)
         );
+        if (typeof payload.email !== "string") throw new Error("Missing email");
         return NextResponse.next();
-    } catch (err) {
+    } catch {
         return NextResponse.redirect(new URL("/login", req.url));
     }
 }
@@ -37,6 +40,8 @@ export async function middleware(req: NextRequest) {
 export const config = {
     matcher: [
         "/dashboard/:path*",
+        "/competitors/:path*",
+        "/history/:path*",
         "/alerts/:path*",
         "/settings/:path*",
         "/landing/:path*",

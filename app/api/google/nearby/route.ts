@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getEmailFromCookie } from "@/lib/auth";
+import type { GooglePlaceResult } from "@/lib/googlePlaces";
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY!;
 
 export async function POST(req: NextRequest) {
   try {
+    if (!getEmailFromCookie(req)) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     const { lat, lng, type, radius = 500 } = await req.json();
 
     if (!lat || !lng || !type) {
@@ -25,7 +28,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const results = data.results.map((p: any) => ({
+    const results = (data.results as GooglePlaceResult[]).map((p) => ({
       place_id: p.place_id,
       name: p.name,
       rating: p.rating ?? null,

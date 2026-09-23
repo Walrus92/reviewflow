@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import jwt from "jsonwebtoken";
-import { getEmailFromCookie } from "@/lib/auth";
+import { ownsProfileId, requireProfile } from "@/lib/requestAuth";
 
 const API_BASE = process.env.NEXT_PUBLIC_SITE_URL;
 
 export async function POST(req: NextRequest) {
     try {
-        const email = getEmailFromCookie(req);
-        if (!email) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+        const auth = await requireProfile(req);
+        if (auth.error) return auth.error;
 
         const { lat, lng, type, profile_id } = await req.json();
 
         if (!lat || !lng || !type || !profile_id) {
             return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+        }
+        if (!ownsProfileId(auth.profile, profile_id)) {
+            return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
         }
 
         // 1. Buscar competidores vía Nearby API
@@ -29,9 +31,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Failed nearby" }, { status: 500 });
         }
 
-        const saved: any[] = [];
+        const saved: { competitor_id: number; place_id: string }[] = [];
 
         for (const c of competitors) {
+            if (c.place_id === auth.profile.place_id) continue;
             // 2. Insertar en "competitors" si no existe
             const { data: existing } = await supabase
                 .from("competitors")
@@ -69,7 +72,7 @@ export async function POST(req: NextRequest) {
                     })
                     .select()
                     .single();
-            } catch (err) {
+            } catch {
                 // silencioso
             }
 

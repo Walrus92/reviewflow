@@ -1,10 +1,22 @@
 "use client";
-import { signIn } from "next-auth/react";
 import { useState } from "react";
 import Link from "next/link";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [devLink, setDevLink] = useState("");
+
+  const send = async () => {
+    const response = await fetch("/api/auth/magic/send", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = await response.json();
+    setDevLink(typeof data.devLink === "string" ? data.devLink : "");
+    setMessage(response.ok ? data.devLink ? "Acceso local listo." : "Enlace enviado. Revisa tu correo." : "No se pudo enviar el enlace.");
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -20,11 +32,14 @@ export default function SignupPage() {
         />
 
         <button
-          onClick={() => signIn("email", { email })}
+          onClick={send}
           className="w-full bg-black text-white py-2 rounded hover:bg-gray-800"
         >
           Continuar
         </button>
+
+        {message && <p role="status" className="text-sm text-center">{message}</p>}
+        {devLink && <a className="block text-center text-blue-600 underline" href={devLink}>Abrir acceso local</a>}
 
         <p className="text-center text-sm text-gray-600">
           ¿Ya tienes cuenta?{" "}
