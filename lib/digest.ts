@@ -6,9 +6,9 @@ const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => (
 
 export function hasFreshCapture(overview: Overview, since: string): boolean {
   const cutoff = Date.parse(since);
-  return [overview.own.capturedAt, ...overview.competitors.map((item) => item.capturedAt)]
-    .some((capturedAt) => capturedAt !== null && Number.isFinite(Date.parse(capturedAt)) &&
-      Date.parse(capturedAt) >= cutoff);
+  const capturedAt = overview.own.capturedAt;
+  return capturedAt !== null && Number.isFinite(Date.parse(capturedAt)) &&
+    Date.parse(capturedAt) >= cutoff;
 }
 
 export function weeklyDigest(overview: Overview, dashboardUrl: string) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ManualCaptureForm from "@/components/intelligence/ManualCaptureForm";
 
 // ----------------------
 // ICONOS POR CATEGORÍA
@@ -414,6 +415,8 @@ export default function SettingsPage() {
         {saveMessage && <p role="status" className="text-sm">{saveMessage}</p>}
 
       </div>
+
+      {profile?.id && <ManualCaptureForm />}
     </div>
   );
 }

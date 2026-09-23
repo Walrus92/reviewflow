@@ -33,7 +33,7 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
 
   const [{ data: ownRows, error: ownError }, { data: links, error: linkError }] = await Promise.all([
     supabaseAdmin.from("review_snapshots")
-      .select("rating,review_count,created_at")
+      .select("rating,review_count,created_at,source_kind")
       .eq("profile_id", profileId)
       .order("created_at", { ascending: false })
       .limit(200),
@@ -50,8 +50,9 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
     const [{ data: compData, error: compError }, { data: snapData, error: snapError }] = await Promise.all([
       supabaseAdmin.from("competitors").select("id,name,place_id").in("id", competitorIds),
       supabaseAdmin.from("competitor_snapshots")
-        .select("competitor_id,rating,review_count,created_at")
+        .select("competitor_id,rating,review_count,created_at,source_kind")
         .in("competitor_id", competitorIds)
+        .or(`source_profile_id.is.null,source_profile_id.eq.${profileId}`)
         .order("created_at", { ascending: false })
         .limit(2000),
     ]);

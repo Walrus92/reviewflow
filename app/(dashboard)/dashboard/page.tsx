@@ -36,7 +36,9 @@ function MetricCard({ title, data }: { title: string; data: MetricSummary }) {
         <p><span className="text-gray-500">Reseñas</span><br /><strong className="text-2xl">{metric(data.reviewCount)}</strong> <span className="text-sm">({delta(data.reviewChange)})</span></p>
         <p><span className="text-gray-500">Crecimiento 7 días</span><br /><strong className="text-2xl">{delta(data.reviewsGained7d)}</strong></p>
       </div>
-      <p className="text-xs text-gray-500">Última captura: {data.capturedAt ? new Date(data.capturedAt).toLocaleString("es-ES") : "ninguna"}</p>
+      <p className="text-xs text-gray-500">Última captura: {data.capturedAt ? new Date(data.capturedAt).toLocaleString("es-ES") : "ninguna"}
+        {data.sourceKind === "manual_owner" ? " · introducida por el propietario" :
+          data.sourceKind === "legacy_google_places" ? " · dato heredado" : ""}</p>
     </section>
   );
 }
@@ -121,7 +123,7 @@ export default function DashboardPage() {
         <p className="text-gray-700">Todavía no hay una fuente autorizada de textos de reseñas conectada a este negocio. Por eso no atribuimos los cambios a entregas, horarios o personas sin evidencia.</p>
         <Link href="/demo" className="underline text-blue-700">Ver un ejemplo con reseñas ficticias</Link>
       </section>
-      <p className="text-xs text-gray-500">Métricas procedentes de capturas existentes de Google Maps. Un periodo sin captura comparable se muestra como no disponible.</p>
+      <p className="text-xs text-gray-500">Cada cifra muestra su fecha y procedencia. Un periodo sin capturas comparables se muestra como no disponible.</p>
     </div>
   );
 }

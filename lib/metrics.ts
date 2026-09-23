@@ -2,12 +2,14 @@ export type MetricPoint = {
   rating: number | null;
   review_count: number | null;
   created_at: string;
+  source_kind?: string | null;
 };
 
 export type MetricSummary = {
   rating: number | null;
   reviewCount: number | null;
   capturedAt: string | null;
+  sourceKind: string | null;
   ratingChange: number | null;
   reviewChange: number | null;
   reviewsGained7d: number | null;
@@ -22,16 +24,22 @@ function difference(current: number | null, previous: number | null): number | n
 export function summarizeMetrics(points: MetricPoint[], now = new Date()): MetricSummary {
   const ordered = [...points].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   const latest = ordered[0];
-  const previous = ordered[1];
-  const cutoff = now.getTime() - 7 * 24 * 60 * 60 * 1000;
-  const weekBaseline = ordered.find((point) => Date.parse(point.created_at) <= cutoff);
+  const latestTime = latest ? Date.parse(latest.created_at) : NaN;
+  const sameSource = (point: MetricPoint) => !latest?.source_kind || point.source_kind === latest.source_kind;
+  const previous = ordered.slice(1).find((point) => sameSource(point) &&
+    latestTime - Date.parse(point.created_at) <= 14 * 86_400_000);
+  const weekBaseline = ordered.slice(1).find((point) => sameSource(point) &&
+    latestTime - Date.parse(point.created_at) >= 5 * 86_400_000 &&
+    latestTime - Date.parse(point.created_at) <= 9 * 86_400_000);
+  const recent = Number.isFinite(latestTime) && now.getTime() - latestTime <= 14 * 86_400_000;
   return {
     rating: latest?.rating ?? null,
     reviewCount: latest?.review_count ?? null,
     capturedAt: latest?.created_at ?? null,
+    sourceKind: latest?.source_kind ?? null,
     ratingChange: latest && previous ? difference(latest.rating, previous.rating) : null,
     reviewChange: latest && previous ? difference(latest.review_count, previous.review_count) : null,
-    reviewsGained7d: latest && weekBaseline
+    reviewsGained7d: latest && weekBaseline && recent
       ? difference(latest.review_count, weekBaseline.review_count)
       : null,
   };

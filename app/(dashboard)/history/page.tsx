@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { assessHistory } from "@/lib/historyQuality";
 
-type Snapshot = { id: number; competitor_id?: number; rating: number | null; review_count: number | null; created_at: string };
+type Snapshot = { id: number; competitor_id?: number; rating: number | null; review_count: number | null; created_at: string; source_kind: string };
 type Competitor = { id: number; name: string | null; place_id: string };
 type History = { own: Snapshot[]; competitors: Competitor[]; snapshots: Snapshot[] };
 
@@ -11,8 +11,8 @@ function HistoryTable({ title, rows }: { title: string; rows: Snapshot[] }) {
   return <section className="rounded-lg border bg-white p-5 space-y-3">
     <h2 className="font-semibold">{title}</h2>
     {rows.length === 0 ? <p className="text-gray-600">Aún no hay capturas.</p> :
-      <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr><th className="py-2">Fecha</th><th>Valoración</th><th>Reseñas</th></tr></thead>
-        <tbody>{rows.map((row) => <tr key={row.id} className="border-t"><td className="py-2">{new Date(row.created_at).toLocaleString("es-ES")}</td><td>{row.rating ?? "—"}</td><td>{row.review_count ?? "—"}</td></tr>)}</tbody>
+      <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr><th className="py-2">Fecha</th><th>Valoración</th><th>Reseñas</th><th>Origen</th></tr></thead>
+        <tbody>{rows.map((row) => <tr key={row.id} className="border-t"><td className="py-2">{new Date(row.created_at).toLocaleString("es-ES")}</td><td>{row.rating ?? "—"}</td><td>{row.review_count ?? "—"}</td><td>{row.source_kind === "manual_owner" ? "Propietario" : "Heredado"}</td></tr>)}</tbody>
       </table></div>}
   </section>;
 }

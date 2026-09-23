@@ -8,10 +8,10 @@ Estado tras la migración incremental del 23 de septiembre de 2026. «Parcial» 
 | 2. Alta de negocio | Existente y reutilizable | Perfil por email y página de configuración. Validar el flujo completo con una cuenta nueva. |
 | 3. Búsqueda de negocio | Existente y reutilizable | Google Places desde servidor; requiere clave del proyecto. |
 | 4. Competidores | Existente y reutilizable | Relaciones por perfil, alta y baja. El alias compartido por Place ID requiere refactor para varios clientes. |
-| 5. Snapshots del negocio | Existente pero necesita refactor | Tabla y capturas históricas conservadas. Escritura heredada desactivada por defecto hasta definir fuente autorizada. |
-| 6. Snapshots de competidores | Existente pero necesita refactor | Tabla y 80 capturas heredadas. Escritura heredada desactivada por defecto. |
+| 5. Snapshots del negocio | Parcialmente implementado | Tabla e histórico conservados; piloto de entrada manual con procedencia e idempotencia diaria. Falta fuente automática autorizada. |
+| 6. Snapshots de competidores | Parcialmente implementado | Tabla y 80 capturas heredadas; piloto manual limitado a competidores vinculados. Falta fuente automática autorizada. |
 | 7. Histórico | Existente y reutilizable | API y página de lectura con acceso por propietario. Consulta acotada a 100 capturas propias y 500 de competidores. |
-| 8. Detección de cambios | Parcialmente implementado | Diferencias y alertas basadas en capturas; necesita nuevas capturas autorizadas y evitar duplicados en la operación futura. |
+| 8. Detección de cambios | Parcialmente implementado | Diferencias y alertas basadas en capturas comparables del mismo origen; se evita duplicar capturas manuales del mismo día. Falta automatización. |
 | 9. Panel «Qué ha cambiado» | Existente y reutilizable | Compara con última visita y muestra alertas, métricas e insights. |
 | 10. Comparativa competitiva | Existente y reutilizable | Valoración, volumen y crecimiento semanal cuando hay periodo comparable. |
 | 11. Alertas | Parcialmente implementado | Listado e inserción desde rutas de captura. Falta captura periódica autorizada e idempotencia persistente. |

@@ -1,6 +1,6 @@
 # ReviewFlow
 
-ReviewFlow is an incremental rebuild of an existing competitive reputation intelligence application. The existing Supabase data is retained. The change-focused dashboard, read-only history, metric insights, alerts, competitor management, opt-in weekly digest endpoint, and fictional review-analysis demo are implemented. Automatic capture and a trusted scheduler are not yet connected.
+ReviewFlow is an incremental rebuild of an existing competitive reputation intelligence application. The existing Supabase data is retained. The change-focused dashboard, read-only history, metric insights, alerts, competitor management, opt-in weekly digest endpoint, and fictional review-analysis demo are implemented. A manual capture pilot is available in Settings; automatic capture is not yet connected.
 
 ## Local setup
 
@@ -29,8 +29,10 @@ The browser does not connect to Supabase directly. Server routes use the service
 
 The demo uses invented reviews. Historical review-text ingestion needs an authorized source and retention rules. Existing Google Places integration is for business discovery; a Google API key alone does not provide complete competitor reviews or establish historical storage rights. Legacy snapshot POST routes are disabled by default with `LEGACY_GOOGLE_CAPTURE_ENABLED=false`.
 
+For a pilot, the signed-in owner can enter today's checked rating and review count for their business and linked competitors in Settings. Captures are marked `manual_owner` and limited to one per subject per UTC day. The first capture is a baseline, not a growth claim. The schema keeps legacy captures with `legacy_google_places` provenance. No review text is inferred from aggregate numbers.
+
 ## Vercel deployment
 
-`vercel.json` schedules a daily check at 08:00 UTC in production. The job sends each opted-in profile at most once per seven days and only when a capture occurred in that period. A daily check allows recovery after an invocation fails. The schedule uses Vercel's production cron. The `reviewflow` Vercel project is connected to `Walrus92/reviewflow`; no deployment has been published yet.
+`vercel.json` schedules a daily check at 08:00 UTC in production. The job sends each opted-in profile at most once per seven days and only when an own-business capture occurred in that period. A daily check allows recovery after an invocation fails. The schedule uses Vercel's production cron. The `reviewflow` Vercel project is connected to `Walrus92/reviewflow` and published at `https://project-qdebw.vercel.app`. The migration branch is deployed manually to Production. Automatic Preview builds from this branch currently fail because Preview lacks the production-only Supabase variables; configure an isolated Preview environment before using it for testing.
 
 Production variables are configured in Vercel, except `RESEND_FROM_EMAIL`, which needs a verified sender domain. `NEXTAUTH_URL` and `NEXT_PUBLIC_SITE_URL` currently use the project's assigned HTTPS domain. `GOOGLE_PLACES_API_KEY` is configured for business search. `DEV_MAGIC_LINK_ENABLED`, `LEGACY_GOOGLE_CAPTURE_ENABLED`, and `WEEKLY_EMAIL_ENABLED` remain `false`. Enable the weekly email only after the sender is verified and an authorized capture source is operating; each business must also opt in from Settings. Vercel sends `CRON_SECRET` as a bearer token to the protected endpoint.

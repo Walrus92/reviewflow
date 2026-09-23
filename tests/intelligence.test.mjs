@@ -6,6 +6,7 @@ import { generateAlertsFromSnapshots } from "../lib/alerts.ts";
 import { hasFreshCapture, weeklyDigest } from "../lib/digest.ts";
 import { metricFindings, reviewFindings } from "../lib/findings.ts";
 import { assessHistory } from "../lib/historyQuality.ts";
+import { manualCaptureKey, parseManualCapture } from "../lib/manualCapture.ts";
 
 const now = new Date("2026-09-23T12:00:00Z");
 const point = (day, rating, review_count) => ({
@@ -23,6 +24,30 @@ test("missing rating is not interpreted as a rating drop", () => {
   const result = summarizeMetrics([point(22, null, 103), point(15, 4.3, 100)], now);
   assert.equal(result.ratingChange, null);
   assert.equal(result.reviewChange, 3);
+});
+
+test("a new manual baseline cannot create growth from old or differently sourced rows", () => {
+  const legacy = { ...point(1, 4.2, 80), source_kind: "legacy_google_places" };
+  const manual = { ...point(23, 4.5, 110), source_kind: "manual_owner" };
+  const result = summarizeMetrics([legacy, manual], now);
+  assert.equal(result.sourceKind, "manual_owner");
+  assert.equal(result.reviewChange, null);
+  assert.equal(result.reviewsGained7d, null);
+  const oldSameSource = { ...point(1, 4.2, 80), source_kind: "manual_owner" };
+  assert.equal(summarizeMetrics([oldSameSource, manual], now).reviewChange, null);
+});
+
+test("manual captures accept measured values and use one key per subject and UTC day", () => {
+  const own = parseManualCapture({ subject_type: "own", rating: 4.6, review_count: 110 });
+  assert.ok(own);
+  assert.equal(manualCaptureKey("profile", own, now), "manual_owner:profile:own:2026-09-23");
+  const rival = parseManualCapture({ subject_type: "competitor", competitor_id: 7,
+    rating: 4.57, review_count: 99 });
+  assert.ok(rival);
+  assert.equal(manualCaptureKey("profile", rival, now), "manual_owner:profile:competitor:7:2026-09-23");
+  assert.equal(parseManualCapture({ subject_type: "competitor", competitor_id: 7,
+    rating: 5.1, review_count: 99 }), null);
+  assert.equal(parseManualCapture({ subject_type: "own", rating: 4.5, review_count: -1 }), null);
 });
 
 test("competitive insight requires comparable weekly observations", () => {
@@ -73,11 +98,20 @@ test("weekly digest skips stale captures", () => {
   assert.equal(hasFreshCapture(overview, "2026-09-16T12:00:00Z"), false);
   assert.equal(hasFreshCapture({ ...overview, own: summarizeMetrics([point(22, 4.3, 103)], now) },
     "2026-09-16T12:00:00Z"), true);
+  assert.equal(hasFreshCapture({ ...overview,
+    competitors: [{ id: 1, name: "Rival", placeId: "rival",
+      ...summarizeMetrics([point(22, 4.5, 130)], now) }] },
+  "2026-09-16T12:00:00Z"), false);
 });
 
 test("stale snapshots do not produce a false current opportunity", () => {
   const old = summarizeMetrics([point(1, 4.3, 103)], now);
   assert.deepEqual(metricFindings(old, [], now).map((item) => item.id), ["stale-capture"]);
+});
+
+test("one fresh capture is a baseline, not evidence of stability", () => {
+  const own = summarizeMetrics([{ ...point(23, 4.5, 100), source_kind: "manual_owner" }], now);
+  assert.deepEqual(metricFindings(own, [], now).map((item) => item.id), ["baseline-only"]);
 });
 
 test("metric opportunities prioritize a drop and one competitive gap", () => {
@@ -113,4 +147,17 @@ test("history flags sparse, stale and inconsistent capture dates", () => {
   assert.equal(quality.reliable, false);
   assert.match(quality.evidence.join(" "), /variaciones bruscas/);
   assert.match(quality.evidence.join(" "), /Sin actualización/);
+});
+
+test("history quality evaluates the current source without legacy anomalies", () => {
+  const points = [
+    { ...point(1, 4.1, 80), source_kind: "legacy_google_places" },
+    { ...point(1, 4.1, 90), source_kind: "legacy_google_places" },
+    { ...point(15, 4.4, 100), source_kind: "manual_owner" },
+    { ...point(20, 4.5, 102), source_kind: "manual_owner" },
+    { ...point(23, 4.5, 104), source_kind: "manual_owner" },
+  ];
+  const quality = assessHistory(points, now);
+  assert.equal(quality.reliable, true);
+  assert.match(quality.evidence.join(" "), /2 capturas de otro origen/);
 });

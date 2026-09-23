@@ -17,14 +17,20 @@ export function metricFindings(own: MetricSummary, competitors: CompetitorSummar
   if (!own.capturedAt) return [{
     id: "no-capture", title: "Aún no podemos explicar qué cambió",
     evidence: ["No hay ninguna captura de tu negocio."],
-    action: "Conecta una fuente de capturas autorizada para crear la primera línea base.", basis: "coverage",
+    action: "Registra una captura comprobada en Configuración para crear la primera línea base.", basis: "coverage",
   }];
 
   const age = now.getTime() - Date.parse(own.capturedAt);
   if (!Number.isFinite(age) || age > 14 * 86_400_000) return [{
     id: "stale-capture", title: "Los datos necesitan una captura nueva",
     evidence: [`Última captura propia: ${new Date(own.capturedAt).toLocaleDateString("es-ES")}.`],
-    action: "Reanuda las capturas desde una fuente autorizada antes de tomar decisiones con estas cifras.", basis: "coverage",
+    action: "Registra una captura actual comprobada antes de tomar decisiones con estas cifras.", basis: "coverage",
+  }];
+
+  if (own.ratingChange === null && own.reviewChange === null && own.reviewsGained7d === null) return [{
+    id: "baseline-only", title: "Ya hay una línea base; falta una segunda captura",
+    evidence: [`Primera captura actual: ${new Date(own.capturedAt).toLocaleDateString("es-ES")}.`],
+    action: "Registra otra captura en un día diferente para saber qué ha cambiado.", basis: "coverage",
   }];
 
   const findings: Finding[] = [];
