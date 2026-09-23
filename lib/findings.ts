@@ -78,9 +78,9 @@ export function reviewFindings(reviews: ReviewObservation[]): Finding[] {
   });
   const people = new Map<string, ReviewObservation[]>();
   for (const review of rival.filter((item) => item.rating >= 4)) {
-    const name = review.text.match(/(?:me atendi[oó]|nos atendi[oó]|gracias a)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/i)?.[1] ??
-      review.text.match(/\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)\s+(?:me|nos)\s+atendi[oó]/i)?.[1];
-    if (name) people.set(name, [...(people.get(name) ?? []), review]);
+    const name = review.text.match(/\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)\s+(?:me|nos)\s+atendi[oó]/i)?.[1] ??
+      review.text.match(/(?:[Gg]racias a|me atendi[oó]|nos atendi[oó])\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/)?.[1];
+    if (name && /^[A-ZÁÉÍÓÚÑ]/.test(name)) people.set(name, [...(people.get(name) ?? []), review]);
   }
   const [person, mentions] = [...people].sort((a, b) => b[1].length - a[1].length)[0] ?? [];
   if (person && mentions && mentions.length >= 2) findings.push({

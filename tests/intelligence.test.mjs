@@ -97,9 +97,12 @@ test("review findings require repeated textual evidence", () => {
     sample("o2", "own", 2, "Otra vez cerrado aunque decía abierto"),
     sample("c1", "competitor", 5, "Ana me atendió y la entrega fue puntual"),
     sample("c2", "competitor", 5, "Gracias a Ana, entrega en 24 horas"),
+    sample("c3", "competitor", 5, "Ana me atendió con paciencia. La entrega fue puntual"),
   ];
-  assert.deepEqual(reviewFindings(reviews).map((item) => item.id),
+  const findings = reviewFindings(reviews);
+  assert.deepEqual(findings.map((item) => item.id),
     ["opening-hours", "rival-delivery", "rival-person"]);
+  assert.match(findings[2].evidence[0], /3 de 3/);
   assert.equal(reviewFindings([reviews[0], reviews[2]]).length, 0);
 });
 
