@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "./supabaseAdmin";
 import { buildInsights, summarizeMetrics, type MetricPoint, type MetricSummary, type CompetitorSummary } from "./metrics";
+import { metricFindings, type Finding } from "./findings";
 export type { MetricPoint, MetricSummary, CompetitorSummary } from "./metrics";
 
 export type ChangeItem = {
@@ -19,6 +20,7 @@ export type Overview = {
   competitors: CompetitorSummary[];
   changes: ChangeItem[];
   insights: string[];
+  findings: Finding[];
 };
 
 export async function loadOverview(profileId: string, now = new Date(), changesSince?: string): Promise<Overview> {
@@ -92,5 +94,6 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
       createdAt: row.created_at,
     })),
     insights: buildInsights(own, competitive),
+    findings: metricFindings(own, competitive, now),
   };
 }

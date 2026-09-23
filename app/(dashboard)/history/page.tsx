@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { assessHistory } from "@/lib/historyQuality";
 
 type Snapshot = { id: number; competitor_id?: number; rating: number | null; review_count: number | null; created_at: string };
 type Competitor = { id: number; name: string | null; place_id: string };
@@ -25,12 +26,26 @@ export default function HistoryPage() {
       setHistory(await response.json());
     }).catch((cause) => setError(cause.message));
   }, []);
+  const quality = history ? assessHistory(history.own) : null;
   return <div className="max-w-4xl space-y-5">
     <div><h1 className="text-2xl font-semibold">Histórico de capturas</h1><p className="text-gray-600">Evolución registrada de valoración y volumen de reseñas.</p></div>
     {error && <p role="alert">{error}</p>}
     {!history && !error && <p>Cargando histórico…</p>}
-    {history && <><HistoryTable title="Tu negocio" rows={history.own} />
-      {history.competitors.map((competitor) => <HistoryTable key={competitor.id} title={competitor.name ?? competitor.place_id}
-        rows={history.snapshots.filter((snapshot) => snapshot.competitor_id === competitor.id)} />)}</>}
+    {history && <>
+      <section className="rounded-lg border bg-white p-5 space-y-3">
+        <h2 className="text-lg font-semibold">¿Podemos sacar una conclusión?</h2>
+        {quality && <>
+          <p className="font-medium">{quality.title}</p>
+          <ul className="list-disc pl-5 text-sm text-gray-700">{quality.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+          <p className="text-sm"><strong>Siguiente paso:</strong> {quality.action}</p>
+        </>}
+      </section>
+      <p className="text-sm text-gray-600">{history.competitors.length} competidores vinculados. Las filas se conservan para auditar las capturas, pero no representan por sí solas el motivo de un cambio.</p>
+      <details className="rounded-lg border bg-white p-5"><summary className="cursor-pointer font-medium">Ver capturas originales</summary>
+        <div className="mt-4 space-y-4"><HistoryTable title="Tu negocio" rows={history.own} />
+          {history.competitors.map((competitor) => <HistoryTable key={competitor.id} title={competitor.name ?? competitor.place_id}
+            rows={history.snapshots.filter((snapshot) => snapshot.competitor_id === competitor.id)} />)}</div>
+      </details>
+    </>}
   </div>;
 }
