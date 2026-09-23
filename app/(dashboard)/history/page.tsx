@@ -12,7 +12,7 @@ function HistoryTable({ title, rows }: { title: string; rows: Snapshot[] }) {
     <h2 className="font-semibold">{title}</h2>
     {rows.length === 0 ? <p className="text-gray-600">Aún no hay capturas.</p> :
       <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr><th className="py-2">Fecha</th><th>Valoración</th><th>Reseñas</th><th>Origen</th></tr></thead>
-        <tbody>{rows.map((row) => <tr key={row.id} className="border-t"><td className="py-2">{new Date(row.created_at).toLocaleString("es-ES")}</td><td>{row.rating ?? "—"}</td><td>{row.review_count ?? "—"}</td><td>{row.source_kind === "manual_owner" ? "Propietario" : "Heredado"}</td></tr>)}</tbody>
+        <tbody>{rows.map((row) => <tr key={row.id} className="border-t"><td className="py-2">{new Date(row.created_at).toLocaleString("es-ES")}</td><td>{row.rating ?? "—"}</td><td>{row.review_count ?? "—"}</td><td>{row.source_kind === "manual_owner" ? "Propietario" : row.source_kind === "google_business_profile" ? "Google Business Profile" : "Heredado"}</td></tr>)}</tbody>
       </table></div>}
   </section>;
 }

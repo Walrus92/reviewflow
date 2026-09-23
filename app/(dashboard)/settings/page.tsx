@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ManualCaptureForm from "@/components/intelligence/ManualCaptureForm";
+import GoogleBusinessConnection from "@/components/intelligence/GoogleBusinessConnection";
 
 // ----------------------
 // ICONOS POR CATEGORÍA
@@ -416,6 +417,7 @@ export default function SettingsPage() {
 
       </div>
 
+      {profile?.id && <GoogleBusinessConnection placeId={profile.place_id} />}
       {profile?.id && <ManualCaptureForm />}
     </div>
   );

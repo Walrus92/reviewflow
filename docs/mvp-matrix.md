@@ -8,7 +8,7 @@ Estado tras la migración incremental del 23 de septiembre de 2026. «Parcial» 
 | 2. Alta de negocio | Existente y reutilizable | Perfil por email y página de configuración. Validar el flujo completo con una cuenta nueva. |
 | 3. Búsqueda de negocio | Existente y reutilizable | Google Places desde servidor; requiere clave del proyecto. |
 | 4. Competidores | Existente y reutilizable | Relaciones por perfil, alta y baja. El alias compartido por Place ID requiere refactor para varios clientes. |
-| 5. Snapshots del negocio | Parcialmente implementado | Tabla e histórico conservados; piloto de entrada manual con procedencia e idempotencia diaria. Falta fuente automática autorizada. |
+| 5. Snapshots del negocio | Parcialmente implementado | Tabla e histórico conservados; entrada manual y flujo OAuth de Google Business Profile con captura diaria preparados. Falta aprobación de Google, credenciales y prueba real con ficha verificada. |
 | 6. Snapshots de competidores | Parcialmente implementado | Tabla y 80 capturas heredadas; piloto manual limitado a competidores vinculados. Falta fuente automática autorizada. |
 | 7. Histórico | Existente y reutilizable | API y página de lectura con acceso por propietario. Consulta acotada a 100 capturas propias y 500 de competidores. |
 | 8. Detección de cambios | Parcialmente implementado | Diferencias y alertas basadas en capturas comparables del mismo origen; se evita duplicar capturas manuales del mismo día. Falta automatización. |

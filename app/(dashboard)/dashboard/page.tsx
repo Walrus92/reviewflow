@@ -38,6 +38,7 @@ function MetricCard({ title, data }: { title: string; data: MetricSummary }) {
       </div>
       <p className="text-xs text-gray-500">Última captura: {data.capturedAt ? new Date(data.capturedAt).toLocaleString("es-ES") : "ninguna"}
         {data.sourceKind === "manual_owner" ? " · introducida por el propietario" :
+          data.sourceKind === "google_business_profile" ? " · Google Business Profile" :
           data.sourceKind === "legacy_google_places" ? " · dato heredado" : ""}</p>
     </section>
   );
