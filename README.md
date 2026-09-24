@@ -37,4 +37,4 @@ The browser never receives the Supabase service-role key. Direct `anon` and `aut
 
 The `reviewflow` Vercel project is connected to `Walrus92/reviewflow` and published at `https://project-qdebw.vercel.app`. The migration branch has been deployed manually to Production; this branch's new Google flow must be deployed before use. Automatic Preview builds currently lack Supabase variables. `vercel.json` keeps only the daily review-text retention and email check at 08:00 UTC. Weekly email remains disabled globally until a verified Resend sender and a suitable source of recurring findings are available. The configured `CRON_SECRET` protects the job endpoint.
 
-See [current migration state](docs/current-state.md) and the [MVP feature matrix](docs/mvp-matrix.md).
+See [current migration state](docs/current-state.md), the [MVP feature matrix](docs/mvp-matrix.md), and the [competitive data source decision](docs/competitive-source-decision.md).

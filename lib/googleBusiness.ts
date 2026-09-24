@@ -2,9 +2,18 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 const scope = "https://www.googleapis.com/auth/business.manage";
 
+function siteUrlConfigured() {
+  try {
+    const url = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "");
+    return (url.protocol === "https:" || url.protocol === "http:") &&
+      Boolean(url.hostname) && !url.username && !url.password;
+  } catch { return false; }
+}
+
 export function googleBusinessConfigured() {
   return Boolean(process.env.GOOGLE_BUSINESS_CLIENT_ID && process.env.GOOGLE_BUSINESS_CLIENT_SECRET &&
-    process.env.GOOGLE_TOKEN_ENCRYPTION_KEY && /^[a-f\d]{64}$/i.test(process.env.GOOGLE_TOKEN_ENCRYPTION_KEY));
+    process.env.GOOGLE_TOKEN_ENCRYPTION_KEY && /^[a-f\d]{64}$/i.test(process.env.GOOGLE_TOKEN_ENCRYPTION_KEY) &&
+    siteUrlConfigured());
 }
 
 export function googleRedirectUri() {

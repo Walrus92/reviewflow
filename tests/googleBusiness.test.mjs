@@ -2,8 +2,30 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   encryptToken, decryptToken, findAuthorizedLocation, getOwnReviewTotals,
-  listAuthorizedLocations, listOwnReviewsPage,
+  googleBusinessConfigured, listAuthorizedLocations, listOwnReviewsPage,
 } from "../lib/googleBusiness.ts";
+
+test("Google connection is offered only with a valid site URL and OAuth configuration", () => {
+  const names = ["GOOGLE_BUSINESS_CLIENT_ID", "GOOGLE_BUSINESS_CLIENT_SECRET",
+    "GOOGLE_TOKEN_ENCRYPTION_KEY", "NEXT_PUBLIC_SITE_URL"];
+  const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+  try {
+    process.env.GOOGLE_BUSINESS_CLIENT_ID = "client-id";
+    process.env.GOOGLE_BUSINESS_CLIENT_SECRET = "client-secret";
+    process.env.GOOGLE_TOKEN_ENCRYPTION_KEY = "ab".repeat(32);
+    process.env.NEXT_PUBLIC_SITE_URL = "https://reviewflow.example";
+    assert.equal(googleBusinessConfigured(), true);
+    process.env.NEXT_PUBLIC_SITE_URL = "not-a-url";
+    assert.equal(googleBusinessConfigured(), false);
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    assert.equal(googleBusinessConfigured(), false);
+  } finally {
+    for (const name of names) {
+      if (previous[name] === undefined) delete process.env[name];
+      else process.env[name] = previous[name];
+    }
+  }
+});
 
 test("refresh tokens are encrypted and authenticated", () => {
   const before = process.env.GOOGLE_TOKEN_ENCRYPTION_KEY;

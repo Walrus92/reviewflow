@@ -33,6 +33,7 @@ test("normalizes authorized Google reviews for temporary analysis without invent
   assert.deepEqual(observations, [{
     id: "r-1", subject: "own", businessName: "Mi negocio", rating: 2,
     text: "Cerrado durante el horario anunciado", publishedAt: "2026-09-22",
+    publishedAtTime: "2026-09-22T10:00:00Z",
     source: "google_business_profile",
   }]);
 });

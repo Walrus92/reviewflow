@@ -17,9 +17,15 @@ export function buildReviewPulse(reviews: ReviewObservation[], now: Date, previo
   const sevenDaysAgo = new Date(now.getTime() - 6 * day).toISOString().slice(0, 10);
   const visitDate = previousVisitAt && Number.isFinite(Date.parse(previousVisitAt))
     ? previousVisitAt.slice(0, 10) : null;
+  const visitTime = previousVisitAt && Number.isFinite(Date.parse(previousVisitAt))
+    ? Date.parse(previousVisitAt) : null;
   return {
     countRecent7d: own.filter((review) => review.publishedAt >= sevenDaysAgo).length,
-    countSinceVisit: visitDate === null ? null : own.filter((review) => review.publishedAt > visitDate).length,
+    countSinceVisit: visitDate === null ? null : own.filter((review) => {
+      const reviewTime = review.publishedAtTime && Date.parse(review.publishedAtTime);
+      return typeof reviewTime === "number" && Number.isFinite(reviewTime) && visitTime !== null
+        ? reviewTime > visitTime : review.publishedAt > visitDate;
+    }).length,
     lastPublishedAt: own.reduce<string | null>((latest, review) =>
       latest === null || review.publishedAt > latest ? review.publishedAt : latest, null),
   };

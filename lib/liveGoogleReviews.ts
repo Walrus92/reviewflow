@@ -59,7 +59,8 @@ export function toLiveReviewObservations(reviews: GoogleLiveReview[], businessNa
         !Number.isFinite(Date.parse(review.createTime!))) return [];
     return [{
       id, subject: "own" as const, businessName, rating, text,
-      publishedAt: date, source: "google_business_profile" as const,
+      publishedAt: date, publishedAtTime: review.createTime,
+      source: "google_business_profile" as const,
     }];
   });
 }

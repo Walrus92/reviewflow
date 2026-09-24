@@ -20,6 +20,18 @@ test("review activity uses publication date and a previous visit conservatively"
   assert.equal(buildReviewPulse(rows, now, null).countSinceVisit, null);
 });
 
+test("a live review published later on the same day counts since the visit", () => {
+  const rows = [
+    { ...review("before", "2026-09-24", 3, "Antes"),
+      source: "google_business_profile", publishedAtTime: "2026-09-24T08:00:00Z" },
+    { ...review("after", "2026-09-24", 5, "Después"),
+      source: "google_business_profile", publishedAtTime: "2026-09-24T15:00:00Z" },
+    review("date-only", "2026-09-24", 4, "Fecha sin hora"),
+  ];
+  assert.equal(buildReviewPulse(rows, new Date("2026-09-24T18:00:00Z"),
+    "2026-09-24T09:00:00Z").countSinceVisit, 1);
+});
+
 test("a topic trend requires both periods and a clear difference", () => {
   const rows = [
     review("p1", "2026-08-10", 5, "Bien"),

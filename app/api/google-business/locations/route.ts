@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bindingBlockedByHistory, firstBindingNeedsConfirmation, hasBusinessHistory } from "@/lib/businessIdentity";
+import { saveGoogleBusinessBinding } from "@/lib/googleBusinessBinding";
 import { listAuthorizedLocations, googleBusinessConfigured, refreshAccessToken } from "@/lib/googleBusiness";
 import { chooseManagedLocation, normalizeManagedBusinessTitle, readPendingSelection,
   selectionCookieName, selectionCookiePath } from "@/lib/googleBusinessSelection";
@@ -76,15 +77,9 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json({ error: "PROFILE_HISTORY_LOOKUP_FAILED" }, { status: 500 });
     }
-    let update = supabaseAdmin.from("profiles")
-      .update({ place_id: selected.placeId }).eq("id", result.profile.id);
-    update = currentPlaceId === null ? update.is("place_id", null) : update.eq("place_id", currentPlaceId);
-    const changed = await update.select("id").maybeSingle();
-    if (changed.error) return NextResponse.json({ error: "PROFILE_UPDATE_FAILED" }, { status: 500 });
-    if (!changed.data) return NextResponse.json({ error: "BUSINESS_IDENTITY_CHANGED" }, { status: 409 });
   }
 
-  const saved = await supabaseAdmin.from("google_business_connections").upsert({
+  const connectionValues = {
     profile_id: result.profile.id,
     place_id: selected.placeId,
     account_name: selected.accountName,
@@ -92,10 +87,48 @@ export async function POST(request: NextRequest) {
     refresh_token_encrypted: result.pending.encryptedRefreshToken,
     connected_at: new Date().toISOString(),
     last_error: null,
-  }, { onConflict: "profile_id" });
-  if (saved.error) {
-    console.error("GOOGLE_BUSINESS_SELECTION_SAVE_FAILED", saved.error);
-    return NextResponse.json({ error: "CONNECTION_SAVE_FAILED" }, { status: 500 });
+  };
+  const binding = await saveGoogleBusinessBinding(currentPlaceId !== selected.placeId, {
+    insertConnection: async () => {
+      const saved = await supabaseAdmin.from("google_business_connections").insert(connectionValues);
+      if (!saved.error) return "saved";
+      console.error("GOOGLE_BUSINESS_SELECTION_SAVE_FAILED", saved.error);
+      return saved.error.code === "23505" ? "conflict" : "error";
+    },
+    upsertConnection: async () => {
+      const saved = await supabaseAdmin.from("google_business_connections")
+        .upsert(connectionValues, { onConflict: "profile_id" });
+      if (saved.error) console.error("GOOGLE_BUSINESS_SELECTION_SAVE_FAILED", saved.error);
+      return !saved.error;
+    },
+    updateProfile: async () => {
+      let update = supabaseAdmin.from("profiles")
+        .update({ place_id: selected.placeId }).eq("id", result.profile.id);
+      update = currentPlaceId === null ? update.is("place_id", null) : update.eq("place_id", currentPlaceId);
+      const changed = await update.select("id").maybeSingle();
+      if (changed.error) {
+        console.error("GOOGLE_BUSINESS_PROFILE_UPDATE_FAILED", changed.error);
+        return "error";
+      }
+      return changed.data ? "updated" : "conflict";
+    },
+    removeInsertedConnection: async () => {
+      const removed = await supabaseAdmin.from("google_business_connections").delete()
+        .eq("profile_id", result.profile.id)
+        .eq("place_id", selected.placeId)
+        .eq("refresh_token_encrypted", result.pending.encryptedRefreshToken)
+        .eq("connected_at", connectionValues.connected_at);
+      if (removed.error) console.error("GOOGLE_BUSINESS_BINDING_CLEANUP_FAILED", removed.error);
+      return !removed.error;
+    },
+  });
+  if (binding.cleanupFailed) console.error("GOOGLE_BUSINESS_BINDING_RECOVERY_REQUIRED", result.profile.id);
+  if (binding.status !== "connected") {
+    const error = binding.status === "connection_conflict" || binding.status === "business_identity_changed"
+      ? "BUSINESS_IDENTITY_CHANGED" : binding.status === "profile_update_failed"
+        ? "PROFILE_UPDATE_FAILED" : "CONNECTION_SAVE_FAILED";
+    const status = error === "BUSINESS_IDENTITY_CHANGED" ? 409 : 500;
+    return NextResponse.json({ error }, { status });
   }
   return clearSelectionCookie(NextResponse.json({
     connected: true, placeId: selected.placeId, locationName: selected.locationName,
