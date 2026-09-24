@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireProfile } from "@/lib/requestAuth";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { googleBusinessConfigured, listOwnReviewsPage, refreshAccessToken } from "@/lib/googleBusiness";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   if (pageToken !== undefined && (!pageToken || pageToken.length > 2048)) {
     return json({ error: "INVALID_PAGE_TOKEN" }, 400);
   }
-  const { data: connection, error } = await supabaseAdmin.from("google_business_connections")
+  const { data: connection, error } = await getSupabaseAdmin().from("google_business_connections")
     .select("place_id,location_name,refresh_token_encrypted")
     .eq("profile_id", auth.profile.id).maybeSingle();
   if (error) return json({ error: "CONNECTION_LOOKUP_FAILED" }, 500);

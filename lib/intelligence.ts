@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "./supabaseAdmin";
+import { getSupabaseAdmin } from "./supabaseAdmin";
 import { buildInsights, summarizeMetrics, type MetricPoint, type MetricSummary, type CompetitorSummary } from "./metrics";
 import { metricFindings, ownReviewFindings, type Finding } from "./findings";
 import type { ReviewObservation } from "./reviews";
@@ -29,7 +29,7 @@ export type Overview = {
 };
 
 export async function loadOverview(profileId: string, now = new Date(), changesSince?: string): Promise<Overview> {
-  const { data: profile, error: profileError } = await supabaseAdmin
+  const { data: profile, error: profileError } = await getSupabaseAdmin()
     .from("profiles")
     .select("id,business_name,place_id,last_dashboard_seen_at")
     .eq("id", profileId)
@@ -39,16 +39,16 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
   const reviewCutoff = new Date(now.getTime() - 89 * 86_400_000).toISOString().slice(0, 10);
   const [{ data: ownRows, error: ownError }, { data: links, error: linkError },
     { data: reviewRows, error: reviewError }] = await Promise.all([
-    supabaseAdmin.from("review_snapshots")
+    getSupabaseAdmin().from("review_snapshots")
       .select("rating,review_count,created_at,source_kind")
       .eq("profile_id", profileId)
       .eq("source_kind", "manual_owner")
       .order("created_at", { ascending: false })
       .limit(200),
-    supabaseAdmin.from("competitor_relations")
+    getSupabaseAdmin().from("competitor_relations")
       .select("competitor_id")
       .eq("profile_id", profileId),
-    supabaseAdmin.from("owner_reviews")
+    getSupabaseAdmin().from("owner_reviews")
       .select("id,rating,review_text,published_at")
       .eq("profile_id", profileId).gte("published_at", reviewCutoff)
       .order("published_at", { ascending: false }).limit(201),
@@ -60,8 +60,8 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
   let competitorRows: (MetricPoint & { competitor_id: number })[] = [];
   if (competitorIds.length) {
     const [{ data: compData, error: compError }, { data: snapData, error: snapError }] = await Promise.all([
-      supabaseAdmin.from("competitors").select("id,name,place_id").in("id", competitorIds),
-      supabaseAdmin.from("competitor_snapshots")
+      getSupabaseAdmin().from("competitors").select("id,name,place_id").in("id", competitorIds),
+      getSupabaseAdmin().from("competitor_snapshots")
         .select("competitor_id,rating,review_count,created_at,source_kind")
         .in("competitor_id", competitorIds)
         .eq("source_kind", "manual_owner")
@@ -76,7 +76,7 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
 
   const since = changesSince ?? profile.last_dashboard_seen_at ??
     new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: alertRows, error: alertError } = await supabaseAdmin
+  const { data: alertRows, error: alertError } = await getSupabaseAdmin()
     .from("alerts")
     .select("id,subject_type,subject_place_id,type,payload,created_at")
     .eq("profile_id", profileId)

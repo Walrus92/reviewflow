@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createHash, randomBytes } from "node:crypto";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(req: Request) {
   try {
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     }
 
     const minuteAgo = new Date(Date.now() - 60_000).toISOString();
-    const { count, error: rateError } = await supabaseAdmin
+    const { count, error: rateError } = await getSupabaseAdmin()
       .from("magic_links")
       .select("token", { head: true, count: "exact" })
       .eq("email", email)
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
     const token = randomBytes(32).toString("base64url");
     const tokenHash = createHash("sha256").update(token).digest("hex");
-    const { error: insertError } = await supabaseAdmin
+    const { error: insertError } = await getSupabaseAdmin()
       .from("magic_links")
       .insert({ email, token: tokenHash });
     if (insertError) throw insertError;
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       html: `<p>Accede a ReviewFlow: <a href="${url}">Abrir enlace</a></p><p>Caduca en 15 minutos y solo se puede usar una vez.</p>`,
     });
     if (mailError) {
-      await supabaseAdmin.from("magic_links").delete().eq("token", tokenHash);
+      await getSupabaseAdmin().from("magic_links").delete().eq("token", tokenHash);
       throw mailError;
     }
     return NextResponse.json({ ok: true });

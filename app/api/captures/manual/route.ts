@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireProfile } from "@/lib/requestAuth";
 import { manualCaptureKey, parseManualCapture } from "@/lib/manualCapture";
 import { generateAlertsFromSnapshots } from "@/lib/alerts";
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   const now = new Date();
   const captureKey = manualCaptureKey(auth.profile.id, input, now);
   const table = input.subjectType === "own" ? "review_snapshots" : "competitor_snapshots";
-  const existing = await supabaseAdmin.from(table)
+  const existing = await getSupabaseAdmin().from(table)
     .select("id,rating,review_count")
     .eq("capture_key", captureKey).maybeSingle();
   if (existing.error) return NextResponse.json({ error: "CAPTURE_LOOKUP_FAILED" }, { status: 500 });
@@ -37,25 +37,25 @@ export async function POST(request: NextRequest) {
   let competitorId: number | null = null;
   if (input.subjectType === "competitor") {
     competitorId = input.competitorId;
-    const relation = await supabaseAdmin.from("competitor_relations")
+    const relation = await getSupabaseAdmin().from("competitor_relations")
       .select("competitor_id").eq("profile_id", auth.profile.id)
       .eq("competitor_id", competitorId).maybeSingle();
     if (relation.error) return NextResponse.json({ error: "RELATION_LOOKUP_FAILED" }, { status: 500 });
     if (!relation.data) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
-    const competitor = await supabaseAdmin.from("competitors")
+    const competitor = await getSupabaseAdmin().from("competitors")
       .select("place_id,name").eq("id", competitorId).single();
     if (competitor.error) return NextResponse.json({ error: "COMPETITOR_LOOKUP_FAILED" }, { status: 500 });
     placeId = competitor.data.place_id;
     name = competitor.data.name ?? placeId;
   } else {
-    const profile = await supabaseAdmin.from("profiles")
+    const profile = await getSupabaseAdmin().from("profiles")
       .select("business_name").eq("id", auth.profile.id).single();
     if (profile.error) return NextResponse.json({ error: "PROFILE_LOOKUP_FAILED" }, { status: 500 });
     name = profile.data.business_name ?? name;
   }
 
   const cutoff = new Date(now.getTime() - 14 * 86_400_000).toISOString();
-  let previousQuery = supabaseAdmin.from(table)
+  let previousQuery = getSupabaseAdmin().from(table)
     .select("rating,review_count")
     .eq("source_kind", "manual_owner")
     .gte("created_at", cutoff)
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     : { competitor_id: competitorId, source_profile_id: auth.profile.id, place_id: placeId, rating: input.rating,
       review_count: input.reviewCount, source_kind: "manual_owner", observed_at: now.toISOString(),
       capture_key: captureKey, data: null };
-  const inserted = await supabaseAdmin.from(table).insert(values).select("id").single();
+  const inserted = await getSupabaseAdmin().from(table).insert(values).select("id").single();
   if (inserted.error) {
     if (inserted.error.code === "23505") {
       return NextResponse.json({ error: "CAPTURE_ALREADY_EXISTS_TODAY" }, { status: 409 });
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
   });
   let savedAlertCount = 0;
   if (alerts.length) {
-    const saved = await supabaseAdmin.from("alerts").insert(alerts.map((alert) => ({
+    const saved = await getSupabaseAdmin().from("alerts").insert(alerts.map((alert) => ({
       profile_id: alert.profile_id, subject_type: alert.subject_type,
       subject_place_id: alert.subject_place_id, type: alert.type,
       payload: { ...alert.payload, capture_id: inserted.data.id, source_kind: "manual_owner" },

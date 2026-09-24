@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireProfile } from "@/lib/requestAuth";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET(req: NextRequest) {
   const auth = await requireProfile(req);
   if (auth.error) return auth.error;
-  const { data: links, error: linkError } = await supabaseAdmin
+  const { data: links, error: linkError } = await getSupabaseAdmin()
     .from("competitor_relations")
     .select("competitor_id")
     .eq("profile_id", auth.profile.id);
   if (linkError) return NextResponse.json({ error: "COMPETITORS_FAILED" }, { status: 500 });
   const ids = (links ?? []).map((link) => link.competitor_id);
   if (!ids.length) return NextResponse.json({ competitors: [] });
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await getSupabaseAdmin()
     .from("competitors")
     .select("id,place_id,name")
     .in("id", ids)
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "OWN_BUSINESS" }, { status: 400 });
   }
 
-  const { data: existingCompetitor, error: lookupError } = await supabaseAdmin
+  const { data: existingCompetitor, error: lookupError } = await getSupabaseAdmin()
     .from("competitors")
     .select("id,place_id,name")
     .eq("place_id", placeId)
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   if (lookupError) return NextResponse.json({ error: "COMPETITOR_LOOKUP_FAILED" }, { status: 500 });
   let competitor = existingCompetitor;
   if (!competitor) {
-    const inserted = await supabaseAdmin
+    const inserted = await getSupabaseAdmin()
       .from("competitors")
       .insert({ place_id: placeId, name })
       .select("id,place_id,name")
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       if (inserted.error.code !== "23505") {
         return NextResponse.json({ error: "COMPETITOR_SAVE_FAILED" }, { status: 500 });
       }
-      const retry = await supabaseAdmin.from("competitors")
+      const retry = await getSupabaseAdmin().from("competitors")
         .select("id,place_id,name").eq("place_id", placeId).is("profile_id", null).single();
       if (retry.error) return NextResponse.json({ error: "COMPETITOR_SAVE_FAILED" }, { status: 500 });
       competitor = retry.data;
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       competitor = inserted.data;
     }
   }
-  const { error } = await supabaseAdmin.from("competitor_relations")
+  const { error } = await getSupabaseAdmin().from("competitor_relations")
     .insert({ profile_id: auth.profile.id, competitor_id: competitor.id });
   if (error && error.code !== "23505") {
     return NextResponse.json({ error: "COMPETITOR_LINK_FAILED" }, { status: 500 });
@@ -75,7 +75,7 @@ export async function DELETE(req: NextRequest) {
   if (!Number.isSafeInteger(id) || id <= 0) {
     return NextResponse.json({ error: "INVALID_COMPETITOR_ID" }, { status: 400 });
   }
-  const { error } = await supabaseAdmin.from("competitor_relations")
+  const { error } = await getSupabaseAdmin().from("competitor_relations")
     .delete().eq("profile_id", auth.profile.id).eq("competitor_id", id);
   if (error) return NextResponse.json({ error: "COMPETITOR_REMOVE_FAILED" }, { status: 500 });
   return NextResponse.json({ ok: true });

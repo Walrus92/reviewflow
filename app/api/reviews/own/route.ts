@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireProfile } from "@/lib/requestAuth";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { parseOwnerReviewImport } from "@/lib/ownerReviews";
 import { oldestRetainedReviewDate } from "@/lib/ownerReviews";
 
 export async function GET(request: NextRequest) {
   const auth = await requireProfile(request);
   if (auth.error) return auth.error;
-  const { data, error } = await supabaseAdmin.from("owner_reviews")
+  const { data, error } = await getSupabaseAdmin().from("owner_reviews")
     .select("id,rating,review_text,published_at,source_label,source_review_id,imported_at")
     .eq("profile_id", auth.profile.id)
     .gte("published_at", oldestRetainedReviewDate())
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     source_kind: "owner_csv", source_label: input.sourceLabel,
     source_review_id: review.id ?? null, rights_confirmed_at: now, imported_at: now,
   }));
-  const previous = await supabaseAdmin.from("owner_reviews")
+  const previous = await getSupabaseAdmin().from("owner_reviews")
     .select("fingerprint,rating,review_text,published_at,source_label")
     .eq("profile_id", auth.profile.id)
     .in("fingerprint", values.map((value) => value.fingerprint));
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       old.published_at !== value.published_at || old.source_label !== value.source_label;
   });
   if (changed.length) {
-    const { error } = await supabaseAdmin.from("owner_reviews")
+    const { error } = await getSupabaseAdmin().from("owner_reviews")
       .upsert(changed, { onConflict: "profile_id,fingerprint" });
     if (error) {
       console.error("OWNER_REVIEW_IMPORT_FAILED", error);
@@ -79,7 +79,7 @@ export async function DELETE(request: NextRequest) {
   if (requestedId !== null && (!/^\d+$/.test(requestedId) || !Number.isSafeInteger(Number(requestedId)))) {
     return NextResponse.json({ error: "INVALID_REVIEW_ID" }, { status: 400 });
   }
-  let deletion = supabaseAdmin.from("owner_reviews").delete().eq("profile_id", auth.profile.id);
+  let deletion = getSupabaseAdmin().from("owner_reviews").delete().eq("profile_id", auth.profile.id);
   if (requestedId !== null) deletion = deletion.eq("id", Number(requestedId));
   const { error } = await deletion;
   if (error) return NextResponse.json({ error: "DELETE_FAILED" }, { status: 500 });

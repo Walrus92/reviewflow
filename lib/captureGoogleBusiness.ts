@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "./supabaseAdmin";
+import { getSupabaseAdmin } from "./supabaseAdmin";
 import { getOwnReviewTotals, refreshAccessToken } from "./googleBusiness";
 import { generateAlertsFromSnapshots } from "./alerts";
 import type { Snapshot } from "./types";
@@ -10,7 +10,7 @@ type Connection = {
 };
 
 export async function captureGoogleBusiness(connection: Connection, now = new Date()) {
-  const profile = await supabaseAdmin.from("profiles").select("place_id,business_name")
+  const profile = await getSupabaseAdmin().from("profiles").select("place_id,business_name")
     .eq("id", connection.profile_id).single();
   if (profile.error || !profile.data || profile.data.place_id !== connection.place_id) {
     throw new Error("CONNECTED_PLACE_CHANGED");
@@ -18,16 +18,16 @@ export async function captureGoogleBusiness(connection: Connection, now = new Da
   const accessToken = await refreshAccessToken(connection.refresh_token_encrypted);
   const totals = await getOwnReviewTotals(accessToken, connection.location_name);
   const captureKey = `google_business_profile:${connection.profile_id}:${now.toISOString().slice(0, 10)}`;
-  const existing = await supabaseAdmin.from("review_snapshots").select("id")
+  const existing = await getSupabaseAdmin().from("review_snapshots").select("id")
     .eq("capture_key", captureKey).maybeSingle();
   if (existing.error) throw existing.error;
   if (existing.data) return { duplicate: true, captureId: existing.data.id };
-  const previous = await supabaseAdmin.from("review_snapshots")
+  const previous = await getSupabaseAdmin().from("review_snapshots")
     .select("rating,review_count")
     .eq("profile_id", connection.profile_id).eq("source_kind", "google_business_profile")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (previous.error) throw previous.error;
-  const inserted = await supabaseAdmin.from("review_snapshots").insert({
+  const inserted = await getSupabaseAdmin().from("review_snapshots").insert({
     profile_id: connection.profile_id, place_id: connection.place_id,
     rating: totals.rating, review_count: totals.reviewCount,
     source_kind: "google_business_profile", observed_at: now.toISOString(),
@@ -47,7 +47,7 @@ export async function captureGoogleBusiness(connection: Connection, now = new Da
     current: { place_id: connection.place_id, rating: totals.rating, review_count: totals.reviewCount },
   });
   if (alerts.length) {
-    const saved = await supabaseAdmin.from("alerts").insert(alerts.map((alert) => ({
+    const saved = await getSupabaseAdmin().from("alerts").insert(alerts.map((alert) => ({
       profile_id: alert.profile_id, subject_type: alert.subject_type,
       subject_place_id: alert.subject_place_id, type: alert.type,
       payload: { ...alert.payload, capture_id: inserted.data.id, source_kind: "google_business_profile" },

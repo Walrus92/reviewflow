@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextRequest } from "next/server";
 import { requireProfile } from "@/lib/requestAuth";
 
@@ -16,13 +16,13 @@ export async function GET(req: NextRequest) {
     }
 
     // ---- METRICAS DE HOY ----
-    const { count: visits_today } = await supabaseAdmin
+    const { count: visits_today } = await getSupabaseAdmin()
         .from("analytics_visits")
         .select("*", { count: "exact", head: true })
         .eq("profile_id", profile_id)
         .gte("created_at", new Date().toISOString().slice(0, 10));
 
-    const { count: clicks_today } = await supabaseAdmin
+    const { count: clicks_today } = await getSupabaseAdmin()
         .from("analytics_clicks")
         .select("*", { count: "exact", head: true })
         .eq("profile_id", profile_id)
@@ -32,12 +32,12 @@ export async function GET(req: NextRequest) {
     const lastWeek = new Date();
     lastWeek.setDate(lastWeek.getDate() - 7);
 
-    const { count: visits_7d } = await supabaseAdmin
+    const { count: visits_7d } = await getSupabaseAdmin()
         .from("analytics_visits")
         .select("*", { count: "exact", head: true })
         .eq("profile_id", profile_id)
         .gte("created_at", lastWeek.toISOString());
-    const clicks_7d_res = await supabaseAdmin
+    const clicks_7d_res = await getSupabaseAdmin()
         .from("analytics_clicks")
         .select("*", { count: "exact", head: true })
         .eq("profile_id", profile_id)
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 
     const clicks_7d = clicks_7d_res.count ?? 0;
     // ---- DESGLOSE GOOGLE/INSTAGRAM ----
-    const { data: click_rows } = await supabaseAdmin
+    const { data: click_rows } = await getSupabaseAdmin()
         .from("analytics_clicks")
         .select("type")
         .eq("profile_id", profile_id);

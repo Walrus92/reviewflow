@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { NextRequest } from "next/server";
 import { ownsProfileId, requireProfile } from "@/lib/requestAuth";
 
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   const ip = req.headers.get("x-forwarded-for") || null;
 
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from("analytics_visits")
     .insert([{ profile_id, user_agent, ip }]);
 

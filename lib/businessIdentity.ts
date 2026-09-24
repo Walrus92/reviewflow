@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "./supabaseAdmin.ts";
+import { getSupabaseAdmin } from "./supabaseAdmin.ts";
 
 type BusinessIdentity = { place_id: string | null; business_name: string | null };
 
@@ -23,13 +23,13 @@ export function firstBindingNeedsConfirmation(currentPlaceId: string | null, has
 
 export async function hasBusinessHistory(profileId: string) {
   const results = await Promise.all([
-    supabaseAdmin.from("review_snapshots").select("id").eq("profile_id", profileId).limit(1),
-    supabaseAdmin.from("owner_reviews").select("id").eq("profile_id", profileId).limit(1),
-    supabaseAdmin.from("competitor_relations").select("id").eq("profile_id", profileId).limit(1),
-    supabaseAdmin.from("competitors").select("id").eq("profile_id", profileId).limit(1),
-    supabaseAdmin.from("competitor_snapshots").select("id").eq("source_profile_id", profileId).limit(1),
-    supabaseAdmin.from("alerts").select("id").eq("profile_id", profileId).limit(1),
-    supabaseAdmin.from("google_business_connections").select("profile_id").eq("profile_id", profileId).limit(1),
+    getSupabaseAdmin().from("review_snapshots").select("id").eq("profile_id", profileId).limit(1),
+    getSupabaseAdmin().from("owner_reviews").select("id").eq("profile_id", profileId).limit(1),
+    getSupabaseAdmin().from("competitor_relations").select("id").eq("profile_id", profileId).limit(1),
+    getSupabaseAdmin().from("competitors").select("id").eq("profile_id", profileId).limit(1),
+    getSupabaseAdmin().from("competitor_snapshots").select("id").eq("source_profile_id", profileId).limit(1),
+    getSupabaseAdmin().from("alerts").select("id").eq("profile_id", profileId).limit(1),
+    getSupabaseAdmin().from("google_business_connections").select("profile_id").eq("profile_id", profileId).limit(1),
   ]);
   if (results.some((result) => result.error)) throw new Error("PROFILE_HISTORY_LOOKUP_FAILED");
   return results.some((result) => Boolean(result.data?.length));

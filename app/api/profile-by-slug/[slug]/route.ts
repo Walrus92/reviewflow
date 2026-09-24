@@ -1,10 +1,10 @@
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET(_req: Request, context: { params: Promise<{ slug: string }> }) {
   const resolved = await context.params;
   const { slug } = resolved;
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await getSupabaseAdmin()
     .from("profiles")
     .select("business_name,slug,types,google_review_url,instagram_url")
     .eq("slug", slug)

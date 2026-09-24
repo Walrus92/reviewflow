@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import jwt from "jsonwebtoken";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await getSupabaseAdmin()
     .from("magic_links")
     .delete()
     .eq("token", tokenHash)

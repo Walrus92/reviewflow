@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireProfile } from "@/lib/requestAuth";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(req: NextRequest) {
   const auth = await requireProfile(req);
   if (auth.error) return auth.error;
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from("profiles")
     .update({ last_dashboard_seen_at: new Date().toISOString() })
     .eq("id", auth.profile.id);

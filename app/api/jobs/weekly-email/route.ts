@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { timingSafeEqual } from "node:crypto";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { loadOverview } from "@/lib/intelligence";
 import { hasFreshEvidence, weeklyDigest } from "@/lib/digest";
 import { oldestRetainedReviewDate } from "@/lib/ownerReviews";
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   const now = new Date();
   const oldest = oldestRetainedReviewDate(now);
-  const { error: pruneError } = await supabaseAdmin.from("owner_reviews")
+  const { error: pruneError } = await getSupabaseAdmin().from("owner_reviews")
     .delete().lt("published_at", oldest);
   if (pruneError) {
     console.error("OWNER_REVIEW_RETENTION_FAILED", pruneError);
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   weekStart.setUTCDate(now.getUTCDate() - (now.getUTCDay() + 6) % 7);
   weekStart.setUTCHours(0, 0, 0, 0);
   const cutoff = new Date(now.getTime() - 7 * 86400_000).toISOString();
-  const { data: profiles, error } = await supabaseAdmin.from("profiles")
+  const { data: profiles, error } = await getSupabaseAdmin().from("profiles")
     .select("id,email,weekly_email_last_sent_at")
     .eq("weekly_email_enabled", true)
     .or(`weekly_email_last_sent_at.is.null,weekly_email_last_sent_at.lt.${cutoff}`)
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
         ...digest,
       }, { idempotencyKey: `weekly-${profile.id}-${week}` });
       if (sendError) throw sendError;
-      const { error: updateError } = await supabaseAdmin.from("profiles")
+      const { error: updateError } = await getSupabaseAdmin().from("profiles")
         .update({ weekly_email_last_sent_at: now.toISOString() })
         .eq("id", profile.id);
       if (updateError) throw updateError;

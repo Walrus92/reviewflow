@@ -1,7 +1,7 @@
 // app/api/alerts/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getEmailFromCookie } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 1) Resolver profile_id desde el email
-    const { data: profile, error: profileErr } = await supabaseAdmin
+    const { data: profile, error: profileErr } = await getSupabaseAdmin()
       .from("profiles")
       .select("id")
       .eq("email", email)
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     const since = new Date();
     since.setDate(since.getDate() - effectiveDays);
 
-    let query = supabaseAdmin
+    let query = getSupabaseAdmin()
       .from("alerts")
       .select("*")
       .eq("profile_id", profile.id)

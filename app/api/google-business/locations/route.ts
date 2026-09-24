@@ -5,7 +5,7 @@ import { listAuthorizedLocations, googleBusinessConfigured, refreshAccessToken }
 import { chooseManagedLocation, normalizeManagedBusinessTitle, readPendingSelection,
   selectionCookieName, selectionCookiePath } from "@/lib/googleBusinessSelection";
 import { requireProfile } from "@/lib/requestAuth";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 function clearSelectionCookie(response: NextResponse, request: NextRequest) {
   response.cookies.set(selectionCookieName, "", {
@@ -90,19 +90,19 @@ export async function POST(request: NextRequest) {
   };
   const binding = await saveGoogleBusinessBinding(currentPlaceId !== selected.placeId, {
     insertConnection: async () => {
-      const saved = await supabaseAdmin.from("google_business_connections").insert(connectionValues);
+      const saved = await getSupabaseAdmin().from("google_business_connections").insert(connectionValues);
       if (!saved.error) return "saved";
       console.error("GOOGLE_BUSINESS_SELECTION_SAVE_FAILED", saved.error);
       return saved.error.code === "23505" ? "conflict" : "error";
     },
     upsertConnection: async () => {
-      const saved = await supabaseAdmin.from("google_business_connections")
+      const saved = await getSupabaseAdmin().from("google_business_connections")
         .upsert(connectionValues, { onConflict: "profile_id" });
       if (saved.error) console.error("GOOGLE_BUSINESS_SELECTION_SAVE_FAILED", saved.error);
       return !saved.error;
     },
     updateProfile: async () => {
-      let update = supabaseAdmin.from("profiles")
+      let update = getSupabaseAdmin().from("profiles")
         .update({ place_id: selected.placeId }).eq("id", result.profile.id);
       update = currentPlaceId === null ? update.is("place_id", null) : update.eq("place_id", currentPlaceId);
       const changed = await update.select("id").maybeSingle();
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       return changed.data ? "updated" : "conflict";
     },
     removeInsertedConnection: async () => {
-      const removed = await supabaseAdmin.from("google_business_connections").delete()
+      const removed = await getSupabaseAdmin().from("google_business_connections").delete()
         .eq("profile_id", result.profile.id)
         .eq("place_id", selected.placeId)
         .eq("refresh_token_encrypted", result.pending.encryptedRefreshToken)

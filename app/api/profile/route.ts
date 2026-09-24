@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getEmailFromCookie } from "@/lib/auth";
 import { businessIdentityChanged, hasBusinessHistory } from "@/lib/businessIdentity";
 
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const email = getEmailFromCookie(req);
     if (!email) return NextResponse.json(null, { status: 401 });
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
         .from("profiles")
         .select("*")
         .eq("email", email)
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     const values = editableProfile(body);
     const slug = slugify(body.business_name);
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
         .from("profiles")
         .insert([{ ...values, email, slug }])
         .select()
@@ -94,7 +94,7 @@ export async function PUT(req: NextRequest) {
         values.slug = slugify(body.business_name);
     }
 
-    const current = await supabaseAdmin.from("profiles")
+    const current = await getSupabaseAdmin().from("profiles")
         .select("id,place_id,business_name").eq("email", email).maybeSingle();
     if (current.error) return NextResponse.json({ error: "PROFILE_LOOKUP_FAILED" }, { status: 500 });
     if (!current.data) return NextResponse.json({ error: "PROFILE_NOT_FOUND" }, { status: 404 });
@@ -112,7 +112,7 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: "PROFILE_HISTORY_LOOKUP_FAILED" }, { status: 500 });
         }
     }
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
         .from("profiles")
         .update(values)
         .eq("id", current.data.id)
