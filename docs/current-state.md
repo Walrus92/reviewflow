@@ -1,6 +1,6 @@
 # Estado de la migración incremental
 
-Auditoría inicial del 23 de septiembre de 2026 y evolución hasta el 24 de septiembre. Se conserva el proyecto Supabase existente `jumsbafjzjnnlxhulvtk`. En la auditoría inicial había `profiles` (1 fila), `users` (0), `magic_links` (9), `review_snapshots` (7), `competitors` (20), `competitor_relations` (20), `competitor_snapshots` (80), `alerts` (6), `analytics_visits` (14) y `analytics_clicks` (8). Las cifras pueden haber cambiado.
+Auditoría inicial del 23 de septiembre de 2026 y evolución hasta el 25 de septiembre. Se conserva el proyecto Supabase existente `jumsbafjzjnnlxhulvtk`. En la auditoría inicial había `profiles` (1 fila), `users` (0), `magic_links` (9), `review_snapshots` (7), `competitors` (20), `competitor_relations` (20), `competitor_snapshots` (80), `alerts` (6), `analytics_visits` (14) y `analytics_clicks` (8). Las cifras pueden haber cambiado.
 
 ## Lo que ya funciona
 
@@ -27,7 +27,7 @@ Esto cambia el alcance del piloto: puede analizar **reseñas propias reales en d
 2. **Validar utilidad con esa ficha.** Comprobar cobertura de páginas, fechas de publicación y si aparecen hallazgos sustentados sobre horario, espera o atención; si la muestra es escasa, mostrarlo sin inventar conclusiones. Validar «desde la última visita» y el criterio de no persistencia de datos Google.
 3. **Fuente competitiva licenciada.** Elegir una fuente con cobertura del negocio piloto y permiso expreso para análisis y retención. Probar un competidor y una pregunta concreta de valor antes de integrar más fuentes. Trustpilot Data Solutions es una posibilidad a evaluar por cobertura y contrato, no una integración aprobada.
 4. **Histórico y correo recurrente.** Resolver el fundamento contractual de almacenar métricas y derivados de cada proveedor; después habilitar capturas históricas automáticas y email semanal con remitente verificado. No activar el cron de Google antiguo como atajo.
-5. **Entorno Preview.** Darle variables aisladas de Supabase y probar la compilación automática antes de depender de despliegues Preview.
+5. **Entorno Preview.** La compilación automática del commit `25c704a` terminó correctamente tras diferir la creación del cliente Supabase hasta runtime. Configurar variables aisladas de Supabase en Preview y hacer una prueba autenticada de sus rutas antes de usar ese despliegue como piloto; el build exitoso por sí solo no verifica la conexión de datos.
 
 La evaluación de fuentes y sus criterios de aceptación están en [competitive-source-decision.md](competitive-source-decision.md).
 
