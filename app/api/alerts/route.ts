@@ -66,7 +66,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      alerts: alerts ?? [],
+      alerts: (alerts ?? []).filter((alert) =>
+        (alert.payload as Record<string, unknown> | null)?.source_kind === "manual_owner"
+      ),
     });
   } catch (e) {
     console.error("SERVER ERROR", e);

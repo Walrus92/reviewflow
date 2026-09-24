@@ -6,7 +6,7 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
 
   const { data, error } = await supabaseAdmin
     .from("profiles")
-    .select("business_name,slug,types,rating,reviews,address,google_review_url,instagram_url")
+    .select("business_name,slug,types,google_review_url,instagram_url")
     .eq("slug", slug)
     .single();
 

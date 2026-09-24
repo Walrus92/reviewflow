@@ -5,7 +5,7 @@ export type ReviewObservation = {
   rating: number;
   text: string;
   publishedAt: string;
-  source: "demo" | "owner_declared";
+  source: "demo" | "owner_declared" | "google_business_profile";
 };
 
 export interface ReviewSource {

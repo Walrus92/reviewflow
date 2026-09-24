@@ -4,10 +4,6 @@
     {
       "path": "/api/jobs/weekly-email",
       "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/jobs/google-business-capture",
-      "schedule": "0 7 * * *"
     }
   ]
 }

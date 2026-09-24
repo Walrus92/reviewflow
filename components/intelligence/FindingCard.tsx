@@ -12,9 +12,9 @@ const accent = {
   metrics: "border-l-blue-600",
 } as const;
 
-export default function FindingCard({ finding }: { finding: Finding }) {
+export default function FindingCard({ finding, reviewBasisLabel }: { finding: Finding; reviewBasisLabel?: string }) {
   return <article className={`h-full rounded-2xl border border-slate-200 border-l-4 bg-white p-5 shadow-sm sm:p-6 ${accent[finding.basis]}`}>
-    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">{basisLabel[finding.basis]}</p>
+    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">{finding.basis === "reviews" && reviewBasisLabel ? reviewBasisLabel : basisLabel[finding.basis]}</p>
     <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">{finding.title}</h3>
     <div className="mt-5">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Qué observamos</p>

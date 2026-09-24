@@ -18,7 +18,7 @@ const ICONS: Record<string, string> = {
   establishment: "🏢",
 };
 
-type PublicProfile = { types?: string[]; business_name?: string; rating?: number | null; reviews?: number | null; address?: string; google_review_url?: string; instagram_url?: string };
+type PublicProfile = { types?: string[]; business_name?: string; google_review_url?: string; instagram_url?: string };
 
 export default function BusinessLanding({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use<{ slug: string }>(params);
@@ -67,21 +67,6 @@ export default function BusinessLanding({ params }: { params: Promise<{ slug: st
         <h1 className="text-3xl font-bold">
           {profile.business_name || "Negocio"}
         </h1>
-
-        {/* RATING */}
-        {(profile.rating || profile.reviews) && (
-          <p className="text-lg font-semibold">
-            ⭐ {profile.rating ?? "–"}{" "}
-            {profile.reviews && (
-              <span className="text-gray-600 text-sm">({profile.reviews})</span>
-            )}
-          </p>
-        )}
-
-        {/* DIRECCIÓN */}
-        {profile.address && (
-          <p className="text-gray-600 text-sm">{profile.address}</p>
-        )}
 
         {/* CTA */}
         <div className="flex flex-col gap-4 mt-6">

@@ -42,6 +42,7 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
     supabaseAdmin.from("review_snapshots")
       .select("rating,review_count,created_at,source_kind")
       .eq("profile_id", profileId)
+      .eq("source_kind", "manual_owner")
       .order("created_at", { ascending: false })
       .limit(200),
     supabaseAdmin.from("competitor_relations")
@@ -63,6 +64,7 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
       supabaseAdmin.from("competitor_snapshots")
         .select("competitor_id,rating,review_count,created_at,source_kind")
         .in("competitor_id", competitorIds)
+        .eq("source_kind", "manual_owner")
         .or(`source_profile_id.is.null,source_profile_id.eq.${profileId}`)
         .order("created_at", { ascending: false })
         .limit(2000),
@@ -122,7 +124,9 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
     previousVisitAt: profile.last_dashboard_seen_at,
     own,
     competitors: competitive,
-    changes: (alertRows ?? []).map((row) => ({
+    changes: (alertRows ?? []).filter((row) =>
+      (row.payload as Record<string, unknown> | null)?.source_kind === "manual_owner"
+    ).map((row) => ({
       id: row.id,
       subjectType: row.subject_type ?? "own",
       subjectPlaceId: row.subject_place_id,

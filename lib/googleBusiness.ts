@@ -74,12 +74,35 @@ async function googleGet<T>(url: string, accessToken: string): Promise<T> {
 
 type Account = { name: string };
 type Location = { name: string; title?: string; metadata?: { placeId?: string } };
+export type AuthorizedLocation = {
+  accountName: string;
+  locationName: string;
+  placeId: string;
+  title?: string;
+};
 
-export async function findAuthorizedLocation(accessToken: string, placeId: string) {
+export type GoogleBusinessReview = {
+  name?: string;
+  reviewId?: string;
+  reviewer?: { displayName?: string; profilePhotoUrl?: string; isAnonymous?: boolean };
+  starRating?: string;
+  comment?: string;
+  createTime?: string;
+  updateTime?: string;
+};
+
+export type GoogleBusinessReviewPage = {
+  reviews: GoogleBusinessReview[];
+  averageRating: number;
+  totalReviewCount: number;
+  nextPageToken: string | null;
+};
+
+async function* authorizedLocations(accessToken: string): AsyncGenerator<AuthorizedLocation> {
   let accountPage: string | undefined;
   do {
     const accountsUrl = new URL("https://mybusinessaccountmanagement.googleapis.com/v1/accounts");
-    accountsUrl.searchParams.set("pageSize", "100");
+    accountsUrl.searchParams.set("pageSize", "20");
     if (accountPage) accountsUrl.searchParams.set("pageToken", accountPage);
     const accounts = await googleGet<{ accounts?: Account[]; nextPageToken?: string }>(accountsUrl.toString(), accessToken);
     for (const account of accounts.accounts ?? []) {
@@ -91,15 +114,35 @@ export async function findAuthorizedLocation(accessToken: string, placeId: strin
         locationsUrl.searchParams.set("pageSize", "100");
         if (locationPage) locationsUrl.searchParams.set("pageToken", locationPage);
         const locations = await googleGet<{ locations?: Location[]; nextPageToken?: string }>(locationsUrl.toString(), accessToken);
-        const match = (locations.locations ?? []).find((location) => location.metadata?.placeId === placeId);
-        if (match && /^locations\/[^/]+$/.test(match.name)) {
-          return { accountName: account.name, locationName: `${account.name}/${match.name}` };
+        for (const location of locations.locations ?? []) {
+          const placeId = location.metadata?.placeId;
+          if (!placeId || !/^locations\/[^/]+$/.test(location.name)) continue;
+          yield {
+            accountName: account.name,
+            locationName: `${account.name}/${location.name}`,
+            placeId,
+            ...(location.title ? { title: location.title } : {}),
+          };
         }
         locationPage = locations.nextPageToken;
       } while (locationPage);
     }
     accountPage = accounts.nextPageToken;
   } while (accountPage);
+}
+
+export async function listAuthorizedLocations(accessToken: string): Promise<AuthorizedLocation[]> {
+  const results: AuthorizedLocation[] = [];
+  for await (const location of authorizedLocations(accessToken)) results.push(location);
+  return results;
+}
+
+export async function findAuthorizedLocation(accessToken: string, placeId: string) {
+  for await (const location of authorizedLocations(accessToken)) {
+    if (location.placeId === placeId) {
+      return { accountName: location.accountName, locationName: location.locationName };
+    }
+  }
   return null;
 }
 
@@ -114,4 +157,53 @@ export async function getOwnReviewTotals(accessToken: string, locationName: stri
     throw new Error("INVALID_GOOGLE_REVIEW_TOTALS");
   }
   return { rating, reviewCount: result.totalReviewCount! };
+}
+
+// Google content is read live for the connected owner and never persisted here.
+// Each request fetches one page so Google can track every use of the API.
+export async function listOwnReviewsPage(
+  accessToken: string, locationName: string, pageToken?: string,
+): Promise<GoogleBusinessReviewPage> {
+  if (!/^accounts\/[^/]+\/locations\/[^/]+$/.test(locationName)) throw new Error("INVALID_LOCATION_NAME");
+  if (pageToken !== undefined && (!pageToken || pageToken.length > 2048)) {
+    throw new Error("INVALID_PAGE_TOKEN");
+  }
+  const url = new URL(`https://mybusiness.googleapis.com/v4/${locationName}/reviews`);
+  url.searchParams.set("pageSize", "50");
+  url.searchParams.set("orderBy", "updateTime desc");
+  if (pageToken) url.searchParams.set("pageToken", pageToken);
+  const result = await googleGet<{
+    reviews?: unknown; averageRating?: number;
+    totalReviewCount?: number; nextPageToken?: string;
+  }>(url.toString(), accessToken);
+  const averageRating = result.averageRating ?? (result.totalReviewCount === 0 ? 0 : NaN);
+  if (!Array.isArray(result.reviews ?? []) || !Number.isFinite(averageRating) ||
+      averageRating < 0 || averageRating > 5 ||
+      !Number.isSafeInteger(result.totalReviewCount) || result.totalReviewCount! < 0 ||
+      (result.nextPageToken !== undefined && typeof result.nextPageToken !== "string")) {
+    throw new Error("INVALID_GOOGLE_REVIEW_PAGE");
+  }
+  const rawReviews: unknown[] = Array.isArray(result.reviews) ? result.reviews : [];
+  const reviews: GoogleBusinessReview[] = rawReviews.map((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      throw new Error("INVALID_GOOGLE_REVIEW_PAGE");
+    }
+    const source = raw as Record<string, unknown>;
+    const review: GoogleBusinessReview = {};
+    for (const field of ["name", "reviewId", "starRating", "comment", "createTime", "updateTime"] as const) {
+      if (typeof source[field] === "string") review[field] = source[field];
+    }
+    if (source.reviewer && typeof source.reviewer === "object" && !Array.isArray(source.reviewer)) {
+      const reviewer = source.reviewer as Record<string, unknown>;
+      review.reviewer = {};
+      if (typeof reviewer.displayName === "string") review.reviewer.displayName = reviewer.displayName;
+      if (typeof reviewer.profilePhotoUrl === "string") review.reviewer.profilePhotoUrl = reviewer.profilePhotoUrl;
+      if (typeof reviewer.isAnonymous === "boolean") review.reviewer.isAnonymous = reviewer.isAnonymous;
+    }
+    return review;
+  });
+  return {
+    reviews, averageRating,
+    totalReviewCount: result.totalReviewCount!, nextPageToken: result.nextPageToken ?? null,
+  };
 }

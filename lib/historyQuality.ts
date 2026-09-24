@@ -9,8 +9,8 @@ export type HistoryQuality = {
 
 export function assessHistory(points: MetricPoint[], now = new Date()): HistoryQuality {
   if (!points.length) return {
-    title: "Aún no hay histórico", evidence: ["No se ha registrado ninguna captura."],
-    action: "Registra una primera captura comprobada en Configuración.", reliable: false,
+    title: "Aún no hay histórico utilizable", evidence: ["No hay capturas de una fuente habilitada para el histórico."],
+    action: "Conecta una fuente autorizada o registra una primera captura comprobada en Configuración.", reliable: false,
   };
   const all = [...points].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
   const latestSource = all.at(-1)?.source_kind;

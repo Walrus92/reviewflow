@@ -1,17 +1,22 @@
 import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
 import { requireProfile } from "@/lib/requestAuth";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { encryptToken, exchangeCode, findAuthorizedLocation, googleBusinessConfigured } from "@/lib/googleBusiness";
+import { exchangeCode, googleBusinessConfigured } from "@/lib/googleBusiness";
+import { createPendingSelection, selectionCookieName, selectionCookiePath,
+  selectionMaxAgeSeconds } from "@/lib/googleBusinessSelection";
 
 export async function GET(request: NextRequest) {
   const settings = new URL("/settings", request.nextUrl.origin);
-  const respond = (code: string) => {
+  const respond = (code: string, selectionTicket?: string) => {
     settings.searchParams.set("google", code);
     const response = NextResponse.redirect(settings);
     response.cookies.set("reviewflow.google_oauth", "", {
       httpOnly: true, secure: request.nextUrl.protocol === "https:", sameSite: "lax",
       maxAge: 0, path: "/api/google-business/callback",
+    });
+    response.cookies.set(selectionCookieName, selectionTicket ?? "", {
+      httpOnly: true, secure: request.nextUrl.protocol === "https:", sameSite: "lax",
+      maxAge: selectionTicket ? selectionMaxAgeSeconds : 0, path: selectionCookiePath,
     });
     return response;
   };
@@ -28,22 +33,15 @@ export async function GET(request: NextRequest) {
     if (typeof decoded === "string") return respond("invalid_state");
     payload = decoded;
   } catch { return respond("invalid_state"); }
-  if (payload.state !== state || payload.profileId !== auth.profile.id || payload.placeId !== auth.profile.place_id) {
+  if (payload.state !== state || payload.profileId !== auth.profile.id ||
+      payload.placeIdAtStart !== auth.profile.place_id) {
     return respond("invalid_state");
   }
   try {
     const tokens = await exchangeCode(code);
     if (!tokens.refresh_token) return respond("no_offline_access");
-    const location = await findAuthorizedLocation(tokens.access_token!, auth.profile.place_id!);
-    if (!location) return respond("location_not_found");
-    const { error } = await supabaseAdmin.from("google_business_connections").upsert({
-      profile_id: auth.profile.id, place_id: auth.profile.place_id,
-      account_name: location.accountName, location_name: location.locationName,
-      refresh_token_encrypted: encryptToken(tokens.refresh_token),
-      connected_at: new Date().toISOString(), last_error: null,
-    }, { onConflict: "profile_id" });
-    if (error) throw error;
-    return respond("connected");
+    const ticket = createPendingSelection(auth.profile.id, auth.profile.place_id, tokens.refresh_token);
+    return respond("choose_location", ticket);
   } catch (error) {
     console.error("GOOGLE_BUSINESS_CONNECT_FAILED", error);
     return respond("connection_failed");

@@ -17,9 +17,9 @@ const quote = (review: ReviewObservation) =>
 
 export function metricFindings(own: MetricSummary, competitors: CompetitorSummary[], now = new Date()): Finding[] {
   if (!own.capturedAt) return [{
-    id: "no-capture", title: "Aún no podemos explicar qué cambió",
-    evidence: ["No hay ninguna captura de tu negocio."],
-    action: "Registra una captura comprobada en Configuración para crear la primera línea base.", basis: "coverage",
+    id: "no-capture", title: "Aún no hay comparativa histórica de cifras",
+    evidence: ["No hay capturas propias de una fuente habilitada para el histórico."],
+    action: "Conecta una fuente autorizada o registra una captura comprobada para crear la primera línea base.", basis: "coverage",
   }];
 
   const age = now.getTime() - Date.parse(own.capturedAt);

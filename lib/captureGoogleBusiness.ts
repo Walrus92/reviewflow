@@ -3,6 +3,8 @@ import { getOwnReviewTotals, refreshAccessToken } from "./googleBusiness";
 import { generateAlertsFromSnapshots } from "./alerts";
 import type { Snapshot } from "./types";
 
+// Retired: this stores Business Profile API content in historical snapshots.
+// Do not call until a compliant source/retention model has been approved.
 type Connection = {
   profile_id: string; place_id: string; location_name: string; refresh_token_encrypted: string;
 };

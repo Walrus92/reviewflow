@@ -30,7 +30,6 @@ const environment = {
   NEXT_PUBLIC_BASE_URL: origin,
   DEV_MAGIC_LINK_ENABLED: "true",
   WEEKLY_EMAIL_ENABLED: "false",
-  LEGACY_GOOGLE_CAPTURE_ENABLED: "false",
 };
 
 console.log("ReviewFlow local: Supabase y enlace de acceso de desarrollo activos. Sin envíos reales.");

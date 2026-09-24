@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Overview, MetricSummary, ChangeItem } from "@/lib/intelligence";
 import FindingCard from "@/components/intelligence/FindingCard";
+import LiveGoogleReviews from "@/components/intelligence/LiveGoogleReviews";
 
 function metric(value: number | null, digits = 0) {
   return value === null ? "—" : value.toLocaleString("es-ES", { maximumFractionDigits: digits });
@@ -107,7 +108,9 @@ export default function DashboardPage() {
   const importantChanges = [...overview.changes].sort((a, b) =>
     Number(b.subjectType === "own") - Number(a.subjectType === "own") ||
     Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 3);
-  const competitors = [...overview.competitors].sort((a, b) =>
+  const competitorsWithData = overview.competitors.filter((competitor) =>
+    competitor.rating !== null || competitor.reviewCount !== null);
+  const competitors = [...competitorsWithData].sort((a, b) =>
     (b.reviewsGained7d ?? -1) - (a.reviewsGained7d ?? -1)).slice(0, 3);
   const reviewPulse = overview.reviewPulse;
 
@@ -120,12 +123,14 @@ export default function DashboardPage() {
         : "resumen de los últimos 7 días"}</p>
     </header>
 
+    <LiveGoogleReviews businessName={overview.businessName} previousVisitAt={overview.previousVisitAt} />
+
     <section aria-labelledby="findings-title" className="space-y-4">
       <div>
         <h2 id="findings-title" className="text-xl font-semibold tracking-tight text-slate-950">Lo que merece tu atención</h2>
         <p className="mt-1 text-sm text-slate-600">Cada señal indica qué observamos y una comprobación concreta para tu negocio.</p>
       </div>
-      {overview.findings.length === 0 ? <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">Aún no hay señales evaluables. Añade una captura o reseñas propias aportadas por el propietario para empezar.</div> :
+      {overview.findings.length === 0 ? <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">Aún no hay señales evaluables en las capturas guardadas. Conecta tu ficha para consultar reseñas propias en directo.</div> :
         <div className="grid gap-4 md:grid-cols-2">
           {overview.findings.map((finding, index) => <div key={finding.id} className={index === 0 ? "md:col-span-2" : ""}>
             <FindingCard finding={finding} />
@@ -151,9 +156,9 @@ export default function DashboardPage() {
           {overview.ownReviewSampleCapped && <p className="mt-2 text-xs text-amber-800">Hay más de 200 reseñas en el periodo. Los patrones temporales se omiten hasta procesar la muestra completa.</p>}
           <Link href="/reviews" className="mt-5 inline-block text-sm font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900">Ver textos y procedencia</Link>
         </> : <>
-          <p className="mt-5 text-sm text-slate-700">Todavía no hay textos propios aportados. Con cifras agregadas no podemos señalar motivos como horarios, esperas o atención.</p>
-          <Link href="/reviews" className="mt-5 inline-block text-sm font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900">Importar reseñas propias</Link>
-          <span className="mx-2 text-slate-400">·</span>
+          <p className="mt-5 text-sm text-slate-700">No hay textos propios guardados por importación manual. Las reseñas de una ficha conectada se consultan en directo arriba.</p>
+          <Link href="/reviews" className="mt-5 inline-block text-sm font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900">Ver reseñas propias</Link>
+          <span className="mx-2 inline-block text-slate-400">·</span>
           <Link href="/demo" className="text-sm font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900">Ver ejemplo ficticio</Link>
         </>}
       </section>
@@ -163,11 +168,12 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 id="competitors-title" className="text-lg font-semibold text-slate-950">Comparación competitiva</h2>
-          <p className="mt-1 text-sm text-slate-600">Hasta tres negocios vigilados, ordenados por variación reciente de reseñas.</p>
+          <p className="mt-1 text-sm text-slate-600">Hasta tres negocios con capturas utilizables, ordenados por variación reciente de reseñas.</p>
         </div>
         <Link href="/competitors" className="text-sm font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900">Ver todos</Link>
       </div>
-      {overview.competitors.length === 0 ? <p className="mt-5 text-sm text-slate-600">Aún no hay competidores vinculados.</p> : <>
+      {overview.competitors.length === 0 ? <p className="mt-5 text-sm text-slate-600">Aún no hay competidores vinculados.</p> :
+      competitorsWithData.length === 0 ? <p className="mt-5 text-sm text-slate-600">Hay {overview.competitors.length} relaciones guardadas, pero ninguna tiene capturas utilizables. La descarga competitiva automática requiere una fuente autorizada.</p> : <>
         <div className="mt-5 overflow-x-auto">
           <table className="w-full min-w-[35rem] border-collapse text-left text-sm">
             <thead className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">

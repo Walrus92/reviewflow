@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { parseReviewCsv, type CsvReview } from "@/lib/reviewCsv";
+import LiveGoogleReviews from "@/components/intelligence/LiveGoogleReviews";
 
 type SavedReview = {
   id: number; rating: number; review_text: string; published_at: string;
@@ -87,10 +88,12 @@ export default function ReviewsPage() {
   return <div className="max-w-4xl space-y-6">
     <div>
       <h1 className="text-2xl font-semibold">Reseñas propias</h1>
-      <p className="text-gray-600">Analizamos reseñas aportadas por el propietario para detectar temas repetidos y cambios entre periodos. El origen se declara en el formulario y ReviewFlow no lo verifica. Las menciones son pistas para investigar, no causas probadas.</p>
+      <p className="text-gray-600">Conecta la ficha que gestionas en Google para consultar reseñas reales y detectar temas repetidos sin descargar archivos. Las señales describen lo que dicen las reseñas y no prueban causas.</p>
     </div>
-    <section className="rounded-lg border bg-white p-6 space-y-4">
-      <h2 className="font-semibold">Importar CSV</h2>
+    <LiveGoogleReviews businessName="Tu negocio" detailed />
+    <details className="rounded-lg border bg-white p-6">
+      <summary className="cursor-pointer font-semibold">Importación manual opcional</summary>
+      <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-600">Formato: <code>fecha,estrellas,texto,id</code> (<code>id</code> opcional; también admite punto y coma). Fecha AAAA-MM-DD de los últimos 90 días y 1–5 estrellas. Hasta 100 reseñas por archivo. Entrecomilla textos con separadores o saltos de línea. Conserva el mismo origen y el mismo ID al corregir una reseña para actualizarla sin duplicarla.</p>
       <pre className="overflow-x-auto rounded bg-gray-50 p-3 text-xs">{`fecha,estrellas,texto,id\n2026-09-20,2,"Esperé media hora y salí tarde",r-101\n2026-09-21,5,"Atención amable y rápida",r-102`}</pre>
       <p className="text-sm text-gray-600">Aporta solo textos que tengas derecho a analizar y conservar. No importes resultados de Places sin comprobar sus condiciones. Los textos anteriores a la ventana de 90 días se eliminan de la tabla activa mediante una tarea diaria; también puedes borrar uno o todos ahora.</p>
@@ -119,10 +122,11 @@ export default function ReviewsPage() {
         {busy ? "Guardando…" : "Importar reseñas"}
       </button>
       {message && <p role="status" className="text-sm">{message}</p>}
-    </section>
+      </div>
+    </details>
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Reseñas guardadas</h2>
+        <h2 className="text-lg font-semibold">Reseñas importadas manualmente</h2>
         {reviews.length > 0 && <button type="button" disabled={busy} onClick={deleteReviews}
           className="text-sm text-red-700 underline disabled:opacity-50">Eliminar todas</button>}
       </div>
