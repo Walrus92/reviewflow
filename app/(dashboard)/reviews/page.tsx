@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { parseReviewCsv, type CsvReview } from "@/lib/reviewCsv";
 
 type SavedReview = {
   id: number; rating: number; review_text: string; published_at: string;
-  source_label: string; imported_at: string;
+  source_label: string; source_review_id: string | null; imported_at: string;
 };
 
 export default function ReviewsPage() {
@@ -16,6 +16,7 @@ export default function ReviewsPage() {
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const fileInput = useRef<HTMLInputElement>(null);
 
   async function loadReviews() {
     const response = await fetch("/api/reviews/own");
@@ -28,6 +29,7 @@ export default function ReviewsPage() {
 
   async function chooseFile(event: ChangeEvent<HTMLInputElement>) {
     setParsed([]);
+    setConfirmed(false);
     setMessage("");
     const file = event.target.files?.[0];
     if (!file) return;
@@ -47,11 +49,12 @@ export default function ReviewsPage() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error === "INVALID_REVIEWS" ?
-        "Comprueba el origen, las fechas, las estrellas (1–5) y los textos (5–2000 caracteres)." :
+        "Comprueba el origen, fechas de los últimos 90 días, estrellas (1–5), textos (5–2000 caracteres) e IDs únicos." :
         "No se pudo importar el archivo.");
-      setMessage(`${result.imported} reseñas nuevas guardadas; ${result.duplicates} ya estaban importadas.`);
+      setMessage(`${result.imported} nuevas, ${result.updated} corregidas y ${result.duplicates} sin cambios.`);
       setParsed([]);
       setConfirmed(false);
+      if (fileInput.current) fileInput.current.value = "";
       await loadReviews();
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : "No se pudo importar."); }
     finally { setBusy(false); }
@@ -69,23 +72,44 @@ export default function ReviewsPage() {
     finally { setBusy(false); }
   }
 
+  async function deleteReview(review: SavedReview) {
+    if (!window.confirm(`¿Eliminar definitivamente la reseña del ${review.published_at}?`)) return;
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/reviews/own?id=${review.id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error();
+      setReviews((previous) => previous.filter((item) => item.id !== review.id));
+      setMessage("Reseña eliminada.");
+    } catch { setMessage("No se pudo eliminar la reseña."); }
+    finally { setBusy(false); }
+  }
+
   return <div className="max-w-4xl space-y-6">
     <div>
       <h1 className="text-2xl font-semibold">Reseñas propias</h1>
-      <p className="text-gray-600">Usamos textos autorizados para detectar temas repetidos y mostrar ejemplos. Las menciones son pistas para investigar, no causas probadas.</p>
+      <p className="text-gray-600">Analizamos reseñas aportadas por el propietario para detectar temas repetidos y cambios entre periodos. El origen se declara en el formulario y ReviewFlow no lo verifica. Las menciones son pistas para investigar, no causas probadas.</p>
     </div>
     <section className="rounded-lg border bg-white p-6 space-y-4">
       <h2 className="font-semibold">Importar CSV</h2>
-      <p className="text-sm text-gray-600">Formato: <code>fecha,estrellas,texto</code> (también admite punto y coma), con fecha AAAA-MM-DD y 1–5 estrellas. Hasta 100 reseñas por archivo. Pon entre comillas los textos con separadores o saltos de línea. Este archivo debe proceder de una fuente que te permita usar y conservar las reseñas; no copies resultados de Places sin comprobar sus condiciones.</p>
-      <pre className="overflow-x-auto rounded bg-gray-50 p-3 text-xs">{`fecha,estrellas,texto\n2026-09-20,2,"Esperé media hora y salí tarde"\n2026-09-21,5,"Atención amable y rápida"`}</pre>
+      <p className="text-sm text-gray-600">Formato: <code>fecha,estrellas,texto,id</code> (<code>id</code> opcional; también admite punto y coma). Fecha AAAA-MM-DD de los últimos 90 días y 1–5 estrellas. Hasta 100 reseñas por archivo. Entrecomilla textos con separadores o saltos de línea. Conserva el mismo origen y el mismo ID al corregir una reseña para actualizarla sin duplicarla.</p>
+      <pre className="overflow-x-auto rounded bg-gray-50 p-3 text-xs">{`fecha,estrellas,texto,id\n2026-09-20,2,"Esperé media hora y salí tarde",r-101\n2026-09-21,5,"Atención amable y rápida",r-102`}</pre>
+      <p className="text-sm text-gray-600">Aporta solo textos que tengas derecho a analizar y conservar. No importes resultados de Places sin comprobar sus condiciones. Los textos anteriores a la ventana de 90 días se eliminan de la tabla activa mediante una tarea diaria; también puedes borrar uno o todos ahora.</p>
       <label className="block text-sm">Origen del archivo
         <input className="mt-1 w-full rounded border px-3 py-2" value={sourceLabel}
           onChange={(event) => setSourceLabel(event.target.value)} placeholder="Ej.: exportación autorizada de mi negocio" maxLength={120} />
       </label>
       <label className="block text-sm">Archivo CSV
-        <input className="mt-1 block w-full" type="file" accept=".csv,text/csv" onChange={chooseFile} />
+        <input ref={fileInput} className="mt-1 block w-full" type="file" accept=".csv,text/csv" onChange={chooseFile} />
       </label>
-      {parsed.length > 0 && <p className="text-sm">{parsed.length} filas listas para validar e importar.</p>}
+      {parsed.length > 0 && <div className="rounded border bg-gray-50 p-3 text-sm">
+        <p className="font-medium">{parsed.length} filas listas para validar e importar</p>
+        <ul className="mt-2 space-y-1 text-gray-600">
+          {parsed.slice(0, 3).map((review, index) => <li key={`${review.id ?? review.date}-${index}`} className="truncate">
+            {review.date} · {review.rating} ★ · {review.text}{review.id ? ` · ID ${review.id}` : ""}
+          </li>)}
+        </ul>
+        {parsed.length > 3 && <p className="mt-2 text-xs text-gray-500">Y {parsed.length - 3} filas más.</p>}
+      </div>}
       <label className="flex gap-2 text-sm">
         <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
         <span>Confirmo que puedo aportar estos textos para su análisis y conservación en ReviewFlow.</span>
@@ -103,11 +127,15 @@ export default function ReviewsPage() {
           className="text-sm text-red-700 underline disabled:opacity-50">Eliminar todas</button>}
       </div>
       {reviews.length === 0 ? <p className="text-gray-600">Aún no hay reseñas importadas.</p> : <>
-        <p className="text-sm text-gray-600">Mostramos las 200 más recientes. <Link className="underline" href="/dashboard">Ver señales en el panel</Link>.</p>
+        <p className="text-sm text-gray-600">Mostramos hasta 200 reseñas de los últimos 90 días, con origen declarado sin verificar. <Link className="underline" href="/dashboard">Ver señales en el panel</Link>.</p>
         {reviews.map((review) => <article key={review.id} className="rounded border bg-white p-4 space-y-2">
-          <p className="text-sm font-medium">{"★".repeat(review.rating)} · {review.published_at}</p>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <p className="text-sm font-medium">{"★".repeat(review.rating)} · {review.published_at}</p>
+            <button type="button" disabled={busy} onClick={() => deleteReview(review)}
+              className="text-sm text-red-700 underline disabled:opacity-50">Eliminar</button>
+          </div>
           <p className="whitespace-pre-wrap">{review.review_text}</p>
-          <p className="text-xs text-gray-500">Origen: {review.source_label} · importada el {new Date(review.imported_at).toLocaleDateString("es-ES")}</p>
+          <p className="text-xs text-gray-500">Origen declarado: {review.source_label}{review.source_review_id ? ` · ID ${review.source_review_id}` : ""} · importada el {new Date(review.imported_at).toLocaleDateString("es-ES")}</p>
         </article>)}
       </>}
     </section>

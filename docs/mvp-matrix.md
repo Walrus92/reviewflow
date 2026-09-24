@@ -1,6 +1,6 @@
 # Matriz del MVP de ReviewFlow
 
-Estado tras la migración incremental del 23 de septiembre de 2026. «Parcial» significa que la interfaz o la lógica existe, pero falta una fuente de datos, una prueba de operación real o un programador.
+Estado tras la fase de análisis temporal del 24 de septiembre de 2026. «Parcial» significa que la interfaz o la lógica existe, pero falta una fuente de datos o una prueba de operación real.
 
 | Funcionalidad | Estado | Base reutilizada y trabajo pendiente |
 | --- | --- | --- |
@@ -12,12 +12,12 @@ Estado tras la migración incremental del 23 de septiembre de 2026. «Parcial» 
 | 6. Snapshots de competidores | Parcialmente implementado | Tabla y 80 capturas heredadas; piloto manual limitado a competidores vinculados. Falta fuente automática autorizada. |
 | 7. Histórico | Existente y reutilizable | API y página de lectura con acceso por propietario. Consulta acotada a 100 capturas propias y 500 de competidores. |
 | 8. Detección de cambios | Parcialmente implementado | Diferencias y alertas basadas en capturas comparables del mismo origen; se evita duplicar capturas manuales del mismo día. Falta automatización. |
-| 9. Panel «Qué ha cambiado» | Existente y reutilizable | Compara con última visita y muestra alertas, métricas e insights. |
+| 9. Panel «Qué ha cambiado» | Existente y reutilizable | Prioriza hasta tres hallazgos con evidencia y acción. Muestra actividad en la muestra de reseñas y separa el registro de cambios; el propietario marca explícitamente las novedades como vistas. |
 | 10. Comparativa competitiva | Existente y reutilizable | Valoración, volumen y crecimiento semanal cuando hay periodo comparable. |
 | 11. Alertas | Parcialmente implementado | Listado e inserción desde rutas de captura. Falta captura periódica autorizada e idempotencia persistente. |
-| 12. Análisis de reseñas | Parcialmente implementado | Demo ficticia y análisis de reseñas propias importadas con permiso y evidencia en el panel. Falta fuente automática propia y fuente autorizada para competidores. |
-| 13. Insights generados | Existente y reutilizable | Reglas deterministas sobre métricas; ampliar solo a partir de preguntas reales de usuarios. |
-| 14. Email semanal | Parcialmente implementado | Plantilla, preferencia, endpoint protegido, flag global y cron de Vercel configurado. Falta despliegue y prueba de entrega real. |
+| 12. Análisis de reseñas | Parcialmente implementado | Demo ficticia e importación de reseñas propias con origen y derechos declarados por el propietario, sin verificación externa. Admite ID estable opcional, corrección por reimportación y borrado individual o total. Analiza una muestra máxima de 200 reseñas de los últimos 90 días y compara temas en dos ventanas de 30 días cuando hay cobertura suficiente. Falta fuente automática propia y fuente autorizada para competidores. |
+| 13. Insights generados | Existente y reutilizable | Reglas deterministas sobre métricas y menciones en reseñas propias. Los cambios de proporción requieren al menos tres reseñas por periodo, dos menciones recientes y aumento de 30 puntos porcentuales; se omiten cuando la muestra supera el límite. No se infiere causalidad. |
+| 14. Email semanal | Parcialmente implementado | Plantilla centrada en hallazgos sustentados, preferencia, endpoint protegido, flag global y cron de Vercel configurado. Se activa con captura propia o reseñas propias recientes, sin enviar citas textuales. Falta remitente verificado y prueba de entrega real. El mismo cron purga diariamente textos propios fuera de la ventana de 90 días, aunque el email esté desactivado. |
 | 15. Configuración | Existente y reutilizable | Datos del negocio, Places, Instagram y preferencia de email. Refinar validaciones y mensajes según pruebas de uso. |
 
 ## Pospuesto

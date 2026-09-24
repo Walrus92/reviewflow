@@ -3,7 +3,8 @@ import { Resend } from "resend";
 import { timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { loadOverview } from "@/lib/intelligence";
-import { hasFreshCapture, weeklyDigest } from "@/lib/digest";
+import { hasFreshEvidence, weeklyDigest } from "@/lib/digest";
+import { oldestRetainedReviewDate } from "@/lib/ownerReviews";
 
 export const maxDuration = 60;
 
@@ -18,14 +19,21 @@ function authorized(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  const now = new Date();
+  const oldest = oldestRetainedReviewDate(now);
+  const { error: pruneError } = await supabaseAdmin.from("owner_reviews")
+    .delete().lt("published_at", oldest);
+  if (pruneError) {
+    console.error("OWNER_REVIEW_RETENTION_FAILED", pruneError);
+    return NextResponse.json({ error: "REVIEW_RETENTION_FAILED" }, { status: 500 });
+  }
   if (process.env.WEEKLY_EMAIL_ENABLED !== "true") {
-    return NextResponse.json({ enabled: false, sent: 0 });
+    return NextResponse.json({ enabled: false, sent: 0, ownerReviewsRetainedSince: oldest });
   }
   if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL || !process.env.NEXT_PUBLIC_SITE_URL) {
     return NextResponse.json({ error: "EMAIL_NOT_CONFIGURED" }, { status: 503 });
   }
 
-  const now = new Date();
   const weekStart = new Date(now);
   weekStart.setUTCDate(now.getUTCDate() - (now.getUTCDay() + 6) % 7);
   weekStart.setUTCHours(0, 0, 0, 0);
@@ -45,7 +53,7 @@ export async function GET(request: NextRequest) {
     try {
       if (!profile.email) continue;
       const overview = await loadOverview(profile.id, now, cutoff);
-      if (!hasFreshCapture(overview, cutoff)) continue;
+      if (!hasFreshEvidence(overview, cutoff)) continue;
       const digest = weeklyDigest(overview, `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`);
       const week = weekStart.toISOString().slice(0, 10);
       const { error: sendError } = await resend.emails.send({

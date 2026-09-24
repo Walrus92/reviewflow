@@ -2,6 +2,7 @@ import { supabaseAdmin } from "./supabaseAdmin";
 import { buildInsights, summarizeMetrics, type MetricPoint, type MetricSummary, type CompetitorSummary } from "./metrics";
 import { metricFindings, ownReviewFindings, type Finding } from "./findings";
 import type { ReviewObservation } from "./reviews";
+import { buildReviewPulse, reviewTrendFindings, type ReviewPulse } from "./reviewPulse";
 export type { MetricPoint, MetricSummary, CompetitorSummary } from "./metrics";
 
 export type ChangeItem = {
@@ -23,6 +24,8 @@ export type Overview = {
   insights: string[];
   findings: Finding[];
   ownReviewSampleCount: number;
+  ownReviewSampleCapped: boolean;
+  reviewPulse: ReviewPulse;
 };
 
 export async function loadOverview(profileId: string, now = new Date(), changesSince?: string): Promise<Overview> {
@@ -33,7 +36,7 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
     .single();
   if (profileError || !profile) throw new Error("PROFILE_NOT_FOUND");
 
-  const reviewCutoff = new Date(now.getTime() - 90 * 86_400_000).toISOString().slice(0, 10);
+  const reviewCutoff = new Date(now.getTime() - 89 * 86_400_000).toISOString().slice(0, 10);
   const [{ data: ownRows, error: ownError }, { data: links, error: linkError },
     { data: reviewRows, error: reviewError }] = await Promise.all([
     supabaseAdmin.from("review_snapshots")
@@ -47,7 +50,7 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
     supabaseAdmin.from("owner_reviews")
       .select("id,rating,review_text,published_at")
       .eq("profile_id", profileId).gte("published_at", reviewCutoff)
-      .order("published_at", { ascending: false }).limit(200),
+      .order("published_at", { ascending: false }).limit(201),
   ]);
   if (ownError || linkError || reviewError) throw new Error("OVERVIEW_QUERY_FAILED");
 
@@ -87,13 +90,31 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
     placeId: competitor.place_id,
     ...summarizeMetrics(competitorRows.filter((row) => row.competitor_id === competitor.id), now),
   })).sort((a, b) => (b.reviewCount ?? -1) - (a.reviewCount ?? -1));
-  const ownReviews: ReviewObservation[] = (reviewRows ?? []).map((row) => ({
+  const sampleCapped = (reviewRows?.length ?? 0) > 200;
+  const ownReviews: ReviewObservation[] = (reviewRows ?? []).slice(0, 200).map((row) => ({
     id: String(row.id), subject: "own", businessName: profile.business_name ?? "Tu negocio",
-    rating: row.rating, text: row.review_text, publishedAt: row.published_at, source: "authorized",
+    rating: row.rating, text: row.review_text, publishedAt: row.published_at, source: "owner_declared",
   }));
-  const reviewSignals = ownReviewFindings(ownReviews);
+  const trendSignals = reviewTrendFindings(ownReviews, now, sampleCapped);
+  const recentStart = new Date(now.getTime() - 29 * 86_400_000).toISOString().slice(0, 10);
+  const recentReviews = ownReviews.filter((review) => review.publishedAt >= recentStart);
+  const repeatedSignals = ownReviewFindings(recentReviews).filter((finding) =>
+    !trendSignals.some((trend) =>
+      (trend.id === "review-trend-hours" && finding.id === "opening-hours") ||
+      (trend.id === "review-trend-waiting" && finding.id === "own-waiting") ||
+      (trend.id === "review-trend-service" && finding.id === "own-service-praise")));
+  const reviewSignals = [...trendSignals, ...repeatedSignals];
   const metricSignals = metricFindings(own, competitive, now)
     .filter((finding) => finding.id !== "no-strong-signal" || reviewSignals.length === 0);
+  const urgentMetric = metricSignals.find((finding) => finding.id === "own-rating-down");
+  const otherMetric = metricSignals.find((finding) => finding.id !== "own-rating-down");
+  const prioritized: Finding[] = [];
+  if (urgentMetric) prioritized.push(urgentMetric);
+  prioritized.push(...trendSignals.slice(0, urgentMetric ? 1 : 2));
+  prioritized.push(...repeatedSignals);
+  if (otherMetric) prioritized.push(otherMetric);
+  prioritized.push(...reviewSignals, ...metricSignals);
+  const findings = [...new Map(prioritized.map((finding) => [finding.id, finding])).values()].slice(0, 3);
 
   return {
     businessName: profile.business_name ?? "Tu negocio",
@@ -110,7 +131,9 @@ export async function loadOverview(profileId: string, now = new Date(), changesS
       createdAt: row.created_at,
     })),
     insights: buildInsights(own, competitive),
-    findings: [...reviewSignals, ...metricSignals].slice(0, 3),
+    findings,
     ownReviewSampleCount: ownReviews.length,
+    ownReviewSampleCapped: sampleCapped,
+    reviewPulse: buildReviewPulse(ownReviews, now, profile.last_dashboard_seen_at),
   };
 }

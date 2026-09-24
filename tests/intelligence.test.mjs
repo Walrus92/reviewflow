@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { summarizeMetrics, buildInsights } from "../lib/metrics.ts";
 import { analyzeReviews } from "../lib/reviews.ts";
 import { generateAlertsFromSnapshots } from "../lib/alerts.ts";
-import { hasFreshCapture, weeklyDigest } from "../lib/digest.ts";
+import { hasFreshCapture, hasFreshEvidence, weeklyDigest } from "../lib/digest.ts";
 import { metricFindings, reviewFindings } from "../lib/findings.ts";
 import { assessHistory } from "../lib/historyQuality.ts";
 import { manualCaptureKey, parseManualCapture } from "../lib/manualCapture.ts";
@@ -102,6 +102,23 @@ test("weekly digest skips stale captures", () => {
     competitors: [{ id: 1, name: "Rival", placeId: "rival",
       ...summarizeMetrics([point(22, 4.5, 130)], now) }] },
   "2026-09-16T12:00:00Z"), false);
+});
+
+test("weekly digest leads with supported findings and does not email raw review quotes", () => {
+  const old = summarizeMetrics([point(8, 4.3, 103)], now);
+  const overview = { businessName: "Demo", placeId: null, previousVisitAt: null,
+    own: old, competitors: [], changes: [], insights: [],
+    reviewPulse: { countRecent7d: 2, countSinceVisit: null, lastPublishedAt: "2026-09-22" },
+    ownReviewSampleCapped: false,
+    findings: [{ id: "hours", title: "Problemas con <horario>",
+      evidence: ["2 de 3 reseñas propias lo mencionan.", "2026-09-22: «Texto privado»"],
+      action: "Revisar aperturas y <festivos>.", basis: "reviews" }] };
+  assert.equal(hasFreshEvidence(overview, "2026-09-16T12:00:00Z"), true);
+  const digest = weeklyDigest(overview, "https://example.com/dashboard");
+  assert.match(digest.html, /Problemas con &lt;horario&gt;/);
+  assert.match(digest.html, /Revisar aperturas y &lt;festivos&gt;/);
+  assert.doesNotMatch(digest.html, /Texto privado/);
+  assert.match(digest.html, /origen declarado no está verificado/);
 });
 
 test("stale snapshots do not produce a false current opportunity", () => {

@@ -1,5 +1,6 @@
 import type { CompetitorSummary, MetricSummary } from "./metrics";
 import type { ReviewObservation } from "./reviews";
+import { complainsAboutHours, complainsAboutWaiting, praisesCare } from "./reviewTopics.ts";
 
 export type Finding = {
   id: string;
@@ -11,7 +12,8 @@ export type Finding = {
 };
 
 const number = (value: number) => value.toLocaleString("es-ES");
-const quote = (text: string) => `«${text.length > 120 ? `${text.slice(0, 117)}…` : text}»`;
+const quote = (review: ReviewObservation) =>
+  `${review.publishedAt}: «${review.text.length > 120 ? `${review.text.slice(0, 117)}…` : review.text}»`;
 
 export function metricFindings(own: MetricSummary, competitors: CompetitorSummary[], now = new Date()): Finding[] {
   if (!own.capturedAt) return [{
@@ -68,17 +70,17 @@ export function reviewFindings(reviews: ReviewObservation[]): Finding[] {
   const own = reviews.filter((review) => review.subject === "own");
   const rival = reviews.filter((review) => review.subject === "competitor");
   const findings: Finding[] = [];
-  const hours = matching(own.filter((review) => review.rating <= 2), /horario|cerrad[oa]|abr[ií]a|abiert[oa]/i);
+  const hours = own.filter((review) => review.rating <= 2 && complainsAboutHours(review.text));
   if (hours.length >= 2) findings.push({
     id: "opening-hours", title: "Clientes señalan problemas con el horario",
-    evidence: [`${hours.length} de ${own.length} reseñas propias de la muestra lo mencionan.`, ...hours.slice(0, 2).map((review) => quote(review.text))],
+    evidence: [`${hours.length} de ${own.length} reseñas propias de la muestra lo mencionan.`, ...hours.slice(0, 2).map(quote)],
     action: "Comprueba aperturas reales, festivos y horario publicado; corrige cualquier desajuste y mide si dejan de aparecer estas quejas.",
     basis: "reviews", caveat: "Menciones en una muestra de reseñas; no demuestran cuántos clientes se perdieron.",
   });
   const delivery = matching(rival.filter((review) => review.rating >= 4), /entrega|entregar|listo en|plazo/i);
   if (delivery.length >= 2) findings.push({
     id: "rival-delivery", title: `${delivery[0].businessName} recibe elogios por la entrega`,
-    evidence: [`${delivery.length} de ${rival.length} reseñas competidoras de la muestra mencionan entregas o plazos.`, ...delivery.slice(0, 2).map((review) => quote(review.text))],
+    evidence: [`${delivery.length} de ${rival.length} reseñas competidoras de la muestra mencionan entregas o plazos.`, ...delivery.slice(0, 2).map(quote)],
     action: "Compara tus plazos prometidos y reales. Si puedes cumplir un plazo mejor, comunícalo claramente.",
     basis: "reviews", caveat: "Es una señal de percepción en la muestra, no una explicación probada de su crecimiento.",
   });
@@ -91,7 +93,7 @@ export function reviewFindings(reviews: ReviewObservation[]): Finding[] {
   const [person, mentions] = [...people].sort((a, b) => b[1].length - a[1].length)[0] ?? [];
   if (person && mentions && mentions.length >= 2) findings.push({
     id: "rival-person", title: `${person} aparece repetidamente en los elogios`,
-    evidence: [`${mentions.length} de ${rival.length} reseñas competidoras de la muestra mencionan a ${person}.`, ...mentions.slice(0, 1).map((review) => quote(review.text))],
+    evidence: [`${mentions.length} de ${rival.length} reseñas competidoras de la muestra mencionan a ${person}.`, ...mentions.slice(0, 1).map(quote)],
     action: "Observa si tu equipo genera experiencias personales igual de memorables y reconoce las buenas prácticas internas.",
     basis: "reviews", caveat: "La repetición de un nombre no prueba que esa persona cause el crecimiento del negocio.",
   });
@@ -102,19 +104,19 @@ export function ownReviewFindings(reviews: ReviewObservation[]): Finding[] {
   const own = reviews.filter((review) => review.subject === "own");
   const findings = reviewFindings(own);
   const negative = own.filter((review) => review.rating <= 2);
-  const waiting = matching(negative, /\besper[aeéó]|\btard[óoé]|\blent[oa]s?\b|\bdemora/i);
+  const waiting = negative.filter((review) => complainsAboutWaiting(review.text));
   if (waiting.length >= 2) findings.push({
     id: "own-waiting", title: "Varias reseñas critican los tiempos de espera",
     evidence: [`${waiting.length} de ${own.length} reseñas propias recientes de la muestra lo mencionan.`,
-      ...waiting.slice(0, 2).map((review) => quote(review.text))],
+      ...waiting.slice(0, 2).map(quote)],
     action: "Comprueba cuándo se acumulan las esperas y si los tiempos prometidos coinciden con los reales.",
     basis: "reviews", caveat: "Las reseñas señalan experiencias; no miden el tiempo medio de todos los clientes.",
   });
-  const care = matching(own.filter((review) => review.rating >= 4), /atenci[oó]n|trato|amable|personal|me atendi[oó]|nos atendi[oó]/i);
+  const care = own.filter((review) => review.rating >= 4 && praisesCare(review.text));
   if (care.length >= 2) findings.push({
     id: "own-service-praise", title: "La atención aparece repetidamente en los elogios",
     evidence: [`${care.length} de ${own.length} reseñas propias recientes de la muestra lo mencionan.`,
-      ...care.slice(0, 2).map((review) => quote(review.text))],
+      ...care.slice(0, 2).map(quote)],
     action: "Identifica qué prácticas del equipo generan esos comentarios y mantenlas.",
     basis: "reviews", caveat: "Es una percepción expresada en reseñas, no una medida de todos los clientes.",
   });

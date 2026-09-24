@@ -79,9 +79,12 @@ export default function SettingsPage() {
       body: JSON.stringify(profile),
     });
 
+    const result = await response.json();
     if (response.ok) {
-      setProfile(await response.json());
+      setProfile(result);
       setSaveMessage("Configuración guardada.");
+    } else if (response.status === 409 && result.error === "BUSINESS_IDENTITY_LOCKED") {
+      setSaveMessage("Este perfil ya tiene histórico vinculado. Para evitar atribuir sus reseñas y capturas a otro negocio, conserva el Place ID actual; si todavía no tiene Place ID, conserva el nombre. Puedes corregir el nombre cuando el Place ID siga siendo el mismo. Usa otra cuenta para monitorizar un negocio distinto.");
     } else {
       setSaveMessage("No se pudo guardar la configuración.");
     }
@@ -261,6 +264,7 @@ export default function SettingsPage() {
             onChange={(e) => setProfile({ ...profile, place_id: e.target.value })}
           />
         </label>
+        <p className="text-xs text-gray-600">La identidad del negocio queda vinculada a su histórico. Si cambias de negocio después de crear capturas, reseñas o competidores, necesitarás otra cuenta.</p>
 
         {/* URL Google Reviews */}
         <input
